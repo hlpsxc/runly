@@ -27,7 +27,7 @@ struct TaskRowView: View {
                         .font(.caption2)
                         .foregroundStyle(statusColor(status))
                 } else {
-                    Text(task.enabled ? "Not run yet" : "Disabled")
+                    Text(task.enabled ? L10n.tr("not_run_yet") : L10n.tr("disabled"))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }

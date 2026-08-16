@@ -11,6 +11,7 @@ final class AppState {
     let logService: LogService
     let taskService: TaskService
     let runService: RunService
+    let templateService: NotificationTemplateService
 
     var menuBarState = MenuBarState.empty
     var editorRoute: EditorRoute?
@@ -22,6 +23,7 @@ final class AppState {
     var launchdErrorMessage: String?
 
     private(set) var allTasks: [RunlyTask] = []
+    private(set) var notificationTemplates: [NotificationTemplate] = []
 
     init(container: ModelContainer) {
         self.container = container
@@ -31,6 +33,7 @@ final class AppState {
         self.session = session
         self.logService = logService
         self.taskService = TaskService(modelContext: context)
+        self.templateService = NotificationTemplateService(modelContext: context)
         self.runService = RunService(
             modelContext: context,
             logService: logService,
@@ -50,6 +53,7 @@ final class AppState {
     func refresh() {
         do {
             allTasks = try taskService.fetchAll()
+            notificationTemplates = try templateService.fetchAll()
             menuBarState = buildMenuBarState(tasks: allTasks)
             errorMessage = nil
         } catch {
@@ -70,13 +74,24 @@ final class AppState {
     }
 
     func stopRunning() {
-        runService.stopCurrent()
-        // Also try to stop a launchd-spawned headless run for the active task.
         if let taskID = session.taskID {
-            _ = taskService.launchdService.stopRunningJob(taskID: taskID)
-        } else if let running = menuBarState.runningTasks.first {
-            _ = taskService.launchdService.stopRunningJob(taskID: running.id)
+            stopTask(id: taskID)
+            return
         }
+        if let running = menuBarState.runningTasks.first {
+            stopTask(id: running.id)
+            return
+        }
+        runService.stopCurrent()
+        refresh()
+    }
+
+    /// Stop a specific task — in-process executor and/or launchd agent.
+    func stopTask(id: UUID) {
+        if session.isRunning, session.taskID == id {
+            runService.stopCurrent()
+        }
+        _ = taskService.launchdService.stopRunningJob(taskID: id)
         if let err = taskService.launchdService.lastError {
             // Non-fatal when the in-process stop already worked.
             launchdErrorMessage = err
@@ -142,6 +157,40 @@ final class AppState {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    // MARK: - Notification Templates
+
+    func createNotificationTemplate(name: String, command: String) {
+        do {
+            _ = try templateService.create(name: name, command: command)
+            refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateNotificationTemplate(_ template: NotificationTemplate, name: String, command: String) {
+        do {
+            try templateService.update(template, name: name, command: command)
+            refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func deleteNotificationTemplate(_ template: NotificationTemplate) {
+        do {
+            try templateService.delete(template)
+            refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func notificationTemplate(id: UUID?) -> NotificationTemplate? {
+        guard let id else { return nil }
+        return notificationTemplates.first { $0.id == id }
     }
 
     // MARK: - Menu Bar State

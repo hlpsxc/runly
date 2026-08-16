@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    @Environment(LocalizationStore.self) private var localization
 
     private let editTaskID: UUID?
     var onSave: () -> Void
@@ -13,6 +14,12 @@ struct TaskEditorView: View {
     @State private var testOutput: String = ""
     @State private var isTesting = false
     @State private var resolvedPreview: ResolvedCommand?
+    @State private var pastedCommandLine: String = ""
+    @State private var pasteParseNote: String?
+    @State private var pasteParseSeverity: DraftValidator.Severity = .info
+    @State private var notificationSource: TaskDraft.NotificationSource = .system
+    @State private var fieldMessages: [DraftValidator.Message] = []
+
 
     init(route: EditorRoute, onSave: @escaping () -> Void) {
         self.onSave = onSave
@@ -25,22 +32,62 @@ struct TaskEditorView: View {
     }
 
     var body: some View {
+        let _ = localization.revision
+        let t = localization
         NavigationStack {
             Form {
-                Section("Basics") {
-                    TextField("Name", text: $draft.name)
-                    Picker("Type", selection: $draft.type) {
+                Section(t.tr("basics")) {
+                    TextField(t.tr("name"), text: $draft.name)
+                    Picker(t.tr("type"), selection: $draft.type) {
                         ForEach(TaskType.allCases) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
                     .onChange(of: draft.type) { _, _ in refreshPreview() }
-                    Toggle("Enabled", isOn: $draft.enabled)
+                    Toggle(t.tr("enabled"), isOn: $draft.enabled)
+                }
+
+                Section(t.tr("paste_cli")) {
+                    TextField(
+                        "",
+                        text: $pastedCommandLine,
+                        prompt: Text(t.tr("paste_cli.placeholder")),
+                        axis: .vertical
+                    )
+                    .font(.system(.body, design: .monospaced))
+                    .lineLimit(4...12)
+                    .onChange(of: pastedCommandLine) { _, newValue in
+                        applyPastedCommandLine(newValue)
+                    }
+
+                    HStack(alignment: .firstTextBaseline) {
+                        Button(t.tr("parse")) {
+                            applyPastedCommandLine(pastedCommandLine, force: true)
+                        }
+                        .disabled(pastedCommandLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        if let pasteParseNote {
+                            Text(pasteParseNote)
+                                .font(.caption)
+                                .foregroundStyle(severityColor(pasteParseSeverity))
+                        }
+                    }
+
+                    // Empty → show example hint; with input → replace with live status.
+                    if pastedCommandLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(t.tr("paste_cli.example"))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else if pasteParseNote == nil {
+                        Text(t.tr("validate.has_input"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 if draft.type == .agent {
-                    Section("Agent") {
-                        Picker("Provider", selection: $draft.agentProvider) {
+                    Section(t.tr("type.agent")) {
+                        Picker(t.tr("provider"), selection: $draft.agentProvider) {
                             ForEach(AgentProvider.allCases) { provider in
                                 Text(provider.displayName).tag(provider)
                             }
@@ -53,124 +100,209 @@ struct TaskEditorView: View {
                             refreshPreview()
                         }
 
-                        TextField("Executable", text: $draft.command)
+                        TextField(t.tr("executable"), text: $draft.command)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.command) { _, _ in refreshPreview() }
-                        TextField("Prompt", text: $draft.agentPrompt, axis: .vertical)
+                        TextField(t.tr("prompt"), text: $draft.agentPrompt, axis: .vertical)
                             .lineLimit(3...6)
                             .onChange(of: draft.agentPrompt) { _, _ in refreshPreview() }
-                        TextField("Extra Arguments (one per line, optional)", text: $draft.arguments, axis: .vertical)
+                        TextField(t.tr("extra_args"), text: $draft.arguments, axis: .vertical)
                             .font(.system(.body, design: .monospaced))
                             .lineLimit(2...5)
                             .onChange(of: draft.arguments) { _, _ in refreshPreview() }
-                        Text("Templates: {{date}} {{time}} {{task_name}} {{working_directory}} {{prompt}}")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        commandSectionFooter(
+                            emptyHint: t.tr("templates.hint"),
+                            hasInput: hasCommandInput
+                        )
                     }
                 } else if draft.type == .script {
-                    Section("Script") {
-                        TextField("Script Path", text: $draft.command)
+                    Section(t.tr("type.script")) {
+                        TextField(t.tr("script_path"), text: $draft.command)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.command) { _, _ in refreshPreview() }
-                        TextField("Arguments (one per line)", text: $draft.arguments, axis: .vertical)
+                        TextField(t.tr("arguments"), text: $draft.arguments, axis: .vertical)
                             .font(.system(.body, design: .monospaced))
                             .lineLimit(3...8)
                             .onChange(of: draft.arguments) { _, _ in refreshPreview() }
-                        Text("Runs the file directly if executable; otherwise picks python3/node/zsh/… from the extension.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        commandSectionFooter(
+                            emptyHint: t.tr("script.hint"),
+                            hasInput: hasCommandInput
+                        )
                     }
                 } else {
-                    Section("Command") {
-                        TextField("Command", text: $draft.command)
+                    Section(t.tr("type.command")) {
+                        TextField(t.tr("command"), text: $draft.command)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.command) { _, _ in refreshPreview() }
-                        TextField("Arguments (one per line)", text: $draft.arguments, axis: .vertical)
+                        TextField(t.tr("arguments"), text: $draft.arguments, axis: .vertical)
                             .font(.system(.body, design: .monospaced))
                             .lineLimit(3...8)
                             .onChange(of: draft.arguments) { _, _ in refreshPreview() }
-                        Text("Supports items, claude, python3, … — resolved via PATH (+ Homebrew).")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        commandSectionFooter(
+                            emptyHint: t.tr("command.hint"),
+                            hasInput: hasCommandInput
+                        )
                     }
                 }
 
-                Section("Working Directory") {
-                    TextField("~/Projects/…", text: $draft.workingDirectory)
-                        .font(.system(.body, design: .monospaced))
-                        .onChange(of: draft.workingDirectory) { _, _ in refreshPreview() }
+                Section(t.tr("working_directory")) {
+                    TextField(
+                        "",
+                        text: $draft.workingDirectory,
+                        prompt: Text("~/Projects/…")
+                    )
+                    .font(.system(.body, design: .monospaced))
+                    .onChange(of: draft.workingDirectory) { _, _ in refreshPreview() }
+                    feedbackLines(ids: ["cwd"], emptyHint: nil, hasInput: !draft.workingDirectory.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
-                Section("Schedule") {
-                    Picker("Type", selection: $draft.scheduleType) {
+                Section(t.tr("schedule")) {
+                    Picker(t.tr("type"), selection: $draft.scheduleType) {
                         ForEach(ScheduleType.allCases) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
-                    TextField("Expression", text: $draft.scheduleExpression)
-                    Text("Once: 2026-08-20 09:00 · Interval: Every 3 days · Daily: 23:00 · Weekly: Mon 09:00 · Cron: 0 8 * * 1")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .onChange(of: draft.scheduleType) { _, _ in refreshValidation() }
+                    TextField(t.tr("expression"), text: $draft.scheduleExpression)
+                        .onChange(of: draft.scheduleExpression) { _, _ in refreshValidation() }
+                    let scheduleFilled = !draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    feedbackLines(
+                        ids: ["schedule"],
+                        emptyHint: scheduleFilled ? nil : t.tr("schedule.hint"),
+                        hasInput: scheduleFilled
+                    )
                 }
 
-                Section("Environment") {
-                    TextField("KEY=VALUE per line", text: $draft.environment, axis: .vertical)
-                        .font(.system(.body, design: .monospaced))
-                        .lineLimit(3...8)
-                        .onChange(of: draft.environment) { _, _ in refreshPreview() }
+                Section(t.tr("environment")) {
+                    TextField(
+                        "",
+                        text: $draft.environment,
+                        prompt: Text(t.tr("env.placeholder")),
+                        axis: .vertical
+                    )
+                    .font(.system(.body, design: .monospaced))
+                    .lineLimit(3...8)
+                    .onChange(of: draft.environment) { _, _ in refreshPreview() }
+                    feedbackLines(
+                        ids: ["env"],
+                        emptyHint: nil,
+                        hasInput: !draft.environment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        idPrefixMatch: true
+                    )
                 }
 
-                Section("Proxy") {
-                    Toggle("Enabled", isOn: $draft.proxyEnabled)
+                Section(t.tr("proxy")) {
+                    Toggle(t.tr("enabled"), isOn: $draft.proxyEnabled)
                         .onChange(of: draft.proxyEnabled) { _, _ in refreshPreview() }
                     if draft.proxyEnabled {
-                        TextField("HTTP Proxy", text: $draft.httpProxy)
+                        TextField(t.tr("http"), text: $draft.httpProxy)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.httpProxy) { _, _ in refreshPreview() }
-                        TextField("HTTPS Proxy", text: $draft.httpsProxy)
+                        TextField(t.tr("https"), text: $draft.httpsProxy)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.httpsProxy) { _, _ in refreshPreview() }
-                        TextField("SOCKS Proxy", text: $draft.socksProxy)
+                        TextField(t.tr("socks"), text: $draft.socksProxy)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.socksProxy) { _, _ in refreshPreview() }
-                        TextField("NO_PROXY", text: $draft.noProxy)
+                        TextField(t.tr("no_proxy"), text: $draft.noProxy)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.noProxy) { _, _ in refreshPreview() }
                     }
                 }
 
-                Section("Notification") {
-                    Toggle("Enabled", isOn: $draft.notificationEnabled)
+                Section(t.tr("notifications")) {
+                    Toggle(t.tr("enabled"), isOn: $draft.notificationEnabled)
                     if draft.notificationEnabled {
-                        Picker("Trigger", selection: $draft.notificationTrigger) {
+                        Picker(t.tr("trigger"), selection: $draft.notificationTrigger) {
                             ForEach(NotificationTrigger.allCases) { trigger in
                                 Text(trigger.displayName).tag(trigger)
                             }
                         }
-                        TextField("Command (empty = macOS notification)", text: $draft.notificationCommand, axis: .vertical)
+
+                        Picker(t.tr("notif_template.picker"), selection: $notificationSource) {
+                            Text(t.tr("notif_template.source.system")).tag(TaskDraft.NotificationSource.system)
+                            ForEach(appState.notificationTemplates, id: \.id) { template in
+                                Text(template.name).tag(TaskDraft.NotificationSource.template(template.id))
+                            }
+                            Text(t.tr("notif_template.source.custom")).tag(TaskDraft.NotificationSource.custom)
+                        }
+                        .onChange(of: notificationSource) { _, source in
+                            draft.notificationSource = source
+                        }
+
+                        switch notificationSource {
+                        case .system:
+                            Text(t.tr("notif_template.source.system_hint"))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        case .template(let id):
+                            if let template = appState.notificationTemplate(id: id) {
+                                Text(template.preview)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                                Text(t.tr("notif_template.source.template_hint"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text(t.tr("notif_template.missing"))
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        case .custom:
+                            TextField(
+                                "",
+                                text: $draft.notificationCommand,
+                                prompt: Text(t.tr("notification.cmd_placeholder")),
+                                axis: .vertical
+                            )
                             .font(.system(.body, design: .monospaced))
                             .lineLimit(2...4)
-                        Text("Vars: {{task_name}} {{status}} {{exit_code}} {{duration}} {{stdout}}")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        }
+
+                        if showsNotificationHints {
+                            Text(t.tr("notification.vars"))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
-                Section("Limits") {
-                    TextField("Timeout (seconds)", value: $draft.timeout, format: .number)
-                    TextField("Retry Count", value: $draft.retryCount, format: .number)
+                Section(t.tr("limits")) {
+                    TextField(t.tr("timeout_seconds"), value: $draft.timeout, format: .number)
+                    TextField(t.tr("retry_count"), value: $draft.retryCount, format: .number)
                 }
 
-                Section("Command Preview") {
+                Section(t.tr("command_preview")) {
                     Text("$ \(resolvedPreview?.preview ?? draft.previewLine)")
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
-                    labeledPreview("Working Directory", resolvedPreview?.workingDirectory?.path ?? (draft.workingDirectory.isEmpty ? "(default)" : draft.workingDirectory))
-                    labeledPreview("Schedule", "\(draft.scheduleType.displayName) · \(draft.scheduleExpression.isEmpty ? "—" : draft.scheduleExpression)")
+                    labeledPreview(
+                        t.tr("working_directory"),
+                        resolvedPreview?.workingDirectory?.path
+                            ?? (draft.workingDirectory.isEmpty ? t.tr("default") : draft.workingDirectory)
+                    )
+                    labeledPreview(
+                        t.tr("schedule"),
+                        "\(draft.scheduleType.displayName) · \(draft.scheduleExpression.isEmpty ? t.tr("em_dash") : draft.scheduleExpression)"
+                    )
                     if let preview = resolvedPreview {
-                        labeledPreview("PATH (tail)", pathTail(preview.pathSummary))
-                        labeledPreview("Proxy", preview.proxySummary)
+                        labeledPreview(t.tr("path_tail"), pathTail(preview.pathSummary))
+                        labeledPreview(t.tr("proxy"), preview.proxySummary == "(none)" ? t.tr("none") : preview.proxySummary)
                     }
+
+                    if !fieldMessages.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(fieldMessages) { message in
+                                Label(message.text, systemImage: severityIcon(message.severity))
+                                    .font(.caption)
+                                    .foregroundStyle(severityColor(message.severity))
+                                    .labelStyle(.titleAndIcon)
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+
                     if !testOutput.isEmpty {
                         Text(testOutput)
                             .font(.system(.caption, design: .monospaced))
@@ -178,33 +310,36 @@ struct TaskEditorView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     HStack {
-                        Button(isTesting ? "Testing…" : "Test Run") {
+                        Button(isTesting ? t.tr("testing") : t.tr("test_run")) {
                             Task { await testRun() }
                         }
-                        .disabled(isTesting)
+                        .disabled(isTesting || !DraftValidator.blockingErrors(for: draft, resolved: resolvedPreview).isEmpty)
                         Spacer()
                     }
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(editTaskID == nil ? "New Task" : "Edit Task")
+            .navigationTitle(editTaskID == nil ? t.tr("new_task") : t.tr("edit_task"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(t.tr("cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button(t.tr("save")) { save() }
                         .keyboardShortcut(.defaultAction)
+                        .disabled(!DraftValidator.blockingErrors(for: draft, resolved: resolvedPreview).isEmpty)
                 }
             }
             .alert(
-                "Could not save",
+                DraftValidator.blockingErrors(for: draft, resolved: resolvedPreview).isEmpty
+                    ? t.tr("could_not_save")
+                    : t.tr("validate.fix_title"),
                 isPresented: Binding(
                     get: { errorMessage != nil },
                     set: { if !$0 { errorMessage = nil } }
                 )
             ) {
-                Button("OK", role: .cancel) { errorMessage = nil }
+                Button(t.tr("ok"), role: .cancel) { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
             }
@@ -234,18 +369,177 @@ struct TaskEditorView: View {
         if let editTaskID, let task = appState.task(id: editTaskID) {
             editingTask = task
             draft = TaskDraft.from(task)
+            notificationSource = draft.notificationSource
         } else if draft.type == .agent, draft.command.isEmpty {
             draft.command = draft.agentProvider.defaultExecutable
+            notificationSource = draft.notificationSource
+        } else {
+            notificationSource = draft.notificationSource
         }
         refreshPreview()
+    }
+
+    private var hasCommandInput: Bool {
+        !draft.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !draft.arguments.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !draft.agentPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var showsNotificationHints: Bool {
+        switch notificationSource {
+        case .system:
+            return true
+        case .template:
+            return false
+        case .custom:
+            return draft.notificationCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    @ViewBuilder
+    private func commandSectionFooter(emptyHint: String, hasInput: Bool) -> some View {
+        feedbackLines(
+            ids: ["command", "script", "agent", "args"],
+            emptyHint: hasInput ? nil : emptyHint,
+            hasInput: hasInput,
+            idPrefixMatch: true
+        )
+    }
+
+    @ViewBuilder
+    private func feedbackLines(
+        ids: [String],
+        emptyHint: String?,
+        hasInput: Bool,
+        idPrefixMatch: Bool = false
+    ) -> some View {
+        let matched = fieldMessages.filter { message in
+            ids.contains { id in
+                idPrefixMatch ? message.id.hasPrefix(id) : message.id == id
+            }
+        }
+        if !matched.isEmpty {
+            ForEach(matched) { message in
+                Text(message.text)
+                    .font(.caption)
+                    .foregroundStyle(severityColor(message.severity))
+            }
+        } else if let emptyHint, !hasInput {
+            Text(emptyHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func severityColor(_ severity: DraftValidator.Severity) -> Color {
+        switch severity {
+        case .info: .secondary
+        case .success: .green
+        case .warning: .orange
+        case .error: .red
+        }
+    }
+
+    private func severityIcon(_ severity: DraftValidator.Severity) -> String {
+        switch severity {
+        case .info: "info.circle"
+        case .success: "checkmark.circle"
+        case .warning: "exclamationmark.triangle"
+        case .error: "xmark.octagon"
+        }
     }
 
     private func refreshPreview() {
         let temp = draft.makeTask()
         resolvedPreview = try? AgentService.resolve(temp)
+        refreshValidation()
+    }
+
+    private func refreshValidation() {
+        fieldMessages = DraftValidator.messages(for: draft, resolved: resolvedPreview)
+    }
+
+    private func applyPastedCommandLine(_ raw: String, force: Bool = false) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            pasteParseNote = nil
+            pasteParseSeverity = .info
+            return
+        }
+
+        // Avoid fighting tiny edits unless user hits Parse.
+        let looksLikeCLI = force
+            || trimmed.contains("\\")
+            || trimmed.contains("\"")
+            || trimmed.contains("'")
+            || trimmed.contains("\n")
+            || trimmed.split(whereSeparator: \.isWhitespace).count >= 2
+
+        guard looksLikeCLI else {
+            pasteParseNote = localization.tr("validate.has_input")
+            pasteParseSeverity = .info
+            // Still treat single token as command when forced or looks intentional.
+            if force || trimmed.split(whereSeparator: \.isWhitespace).count == 1 {
+                draft.command = trimmed
+                draft.arguments = ""
+                refreshPreview()
+            }
+            return
+        }
+
+        switch CommandLineParser.parseDetailed(trimmed) {
+        case .failure(let error):
+            pasteParseSeverity = .error
+            pasteParseNote = parseErrorMessage(error)
+        case .success(let parsed):
+            draft.command = parsed.executable
+            draft.arguments = parsed.argumentsText
+
+            // Agent paste: keep prompt empty; argv already includes -p / prompt text.
+            if draft.type == .agent {
+                draft.agentPrompt = ""
+                let known = ["claude", "codex", "openclaw", "agent"]
+                if known.contains(parsed.executable.lowercased()) {
+                    switch parsed.executable.lowercased() {
+                    case "claude": draft.agentProvider = .claude
+                    case "codex": draft.agentProvider = .codex
+                    case "openclaw": draft.agentProvider = .openclaw
+                    default: draft.agentProvider = .custom
+                    }
+                } else {
+                    draft.agentProvider = .custom
+                }
+            }
+
+            pasteParseSeverity = .success
+            pasteParseNote = String(
+                format: localization.tr("parse.ok"),
+                locale: localization.language.locale,
+                parsed.executable,
+                parsed.arguments.count
+            )
+            refreshPreview()
+        }
+    }
+
+    private func parseErrorMessage(_ error: CommandLineParser.ParseError) -> String {
+        switch error {
+        case .empty: localization.tr("parse.failed")
+        case .unbalancedSingleQuote: localization.tr("parse.unbalanced_single")
+        case .unbalancedDoubleQuote: localization.tr("parse.unbalanced_double")
+        case .trailingEscape: localization.tr("parse.trailing_escape")
+        case .noExecutable: localization.tr("parse.no_executable")
+        }
     }
 
     private func save() {
+        draft.notificationSource = notificationSource
+        refreshValidation()
+        let blockers = DraftValidator.blockingErrors(for: draft, resolved: resolvedPreview)
+        guard blockers.isEmpty else {
+            errorMessage = blockers.map(\.text).joined(separator: "\n")
+            return
+        }
         do {
             if let editingTask {
                 try appState.updateTask(editingTask, with: draft)
@@ -263,12 +557,12 @@ struct TaskEditorView: View {
     private func testRun() async {
         refreshPreview()
         guard let preview = resolvedPreview else {
-            testOutput = "Cannot resolve command. Check executable / script path."
+            testOutput = localization.tr("test.cannot_resolve")
             return
         }
 
         isTesting = true
-        testOutput = "Running test…\n$ \(preview.preview)\n"
+        testOutput = String(format: localization.tr("test.running"), locale: localization.language.locale, preview.preview)
         defer { isTesting = false }
 
         let executor = CommandExecutor()

@@ -19,7 +19,7 @@ struct RunlyApp: App {
 
     init() {
         do {
-            let schema = Schema([RunlyTask.self, TaskRun.self])
+            let schema = Schema([RunlyTask.self, TaskRun.self, NotificationTemplate.self])
             let configuration = ModelConfiguration(
                 "Runly",
                 schema: schema,
@@ -37,6 +37,9 @@ struct RunlyApp: App {
         MenuBarExtra {
             MenuBarView()
                 .environment(appState)
+                .environment(LocalizationStore.shared)
+                .environment(\.locale, LocalizationStore.shared.language.locale)
+                .id(LocalizationStore.shared.revision)
                 .modelContainer(container)
         } label: {
             Image(systemName: appState.menuBarState.iconSystemName)
@@ -46,12 +49,15 @@ struct RunlyApp: App {
         Window("Runly", id: "main") {
             ContentView()
                 .environment(appState)
+                .environment(LocalizationStore.shared)
+                .environment(\.locale, LocalizationStore.shared.language.locale)
+                .id(LocalizationStore.shared.revision)
         }
         .modelContainer(container)
         .defaultSize(width: 1100, height: 720)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("New Task") {
+                Button(L10n.tr("new_task")) {
                     appState.requestNewTask()
                 }
                 .keyboardShortcut("n", modifiers: [.command])
@@ -61,6 +67,9 @@ struct RunlyApp: App {
         Settings {
             SettingsView()
                 .environment(appState)
+                .environment(LocalizationStore.shared)
+                .environment(\.locale, LocalizationStore.shared.language.locale)
+                .id(LocalizationStore.shared.revision)
         }
     }
 }
@@ -82,7 +91,7 @@ enum HeadlessRunner {
         Task { @MainActor in
             var code: Int32 = 0
             do {
-                let schema = Schema([RunlyTask.self, TaskRun.self])
+                let schema = Schema([RunlyTask.self, TaskRun.self, NotificationTemplate.self])
                 let configuration = ModelConfiguration(
                     "Runly",
                     schema: schema,
@@ -102,20 +111,35 @@ enum HeadlessRunner {
             exit(code)
         }
 
-        // Drive the main run loop so @MainActor work can complete.
         dispatchMain()
     }
 }
 
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(LocalizationStore.self) private var localization
     @State private var launchAtLogin = LoginItemService.isEnabled
     @State private var loginError: String?
+    @State private var editingTemplate: TemplateEditorState?
 
     var body: some View {
+        let _ = localization.revision
+        let t = localization
         Form {
-            Section("General") {
-                Toggle("Launch Runly at login", isOn: Binding(
+            Section(t.tr("settings.general")) {
+                Picker(t.tr("language"), selection: Binding(
+                    get: { localization.language },
+                    set: { localization.setLanguage($0) }
+                )) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.pickerLabel).tag(language)
+                    }
+                }
+                Text(t.tr("language.footer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle(t.tr("settings.launch_at_login"), isOn: Binding(
                     get: { launchAtLogin },
                     set: { enabled in
                         do {
@@ -133,27 +157,174 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
-                Text("Independent from per-task launchd schedules.")
+                Text(t.tr("settings.launch_at_login.footer"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("About") {
-                LabeledContent("App", value: "Runly")
-                LabeledContent("Tagline", value: "Run anything. Automatically.")
-                LabeledContent("Mode", value: "Menu Bar First")
-                LabeledContent("Tasks", value: "\(appState.menuBarState.totalTasks)")
+            Section {
+                if appState.notificationTemplates.isEmpty {
+                    Text(t.tr("notif_template.empty"))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(appState.notificationTemplates, id: \.id) { template in
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(template.name)
+                                    .font(.body.weight(.medium))
+                                Text(template.preview)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer(minLength: 8)
+                            Button(t.tr("edit")) {
+                                editingTemplate = .edit(template)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        .contextMenu {
+                            Button(t.tr("edit")) {
+                                editingTemplate = .edit(template)
+                            }
+                            Button(t.tr("delete"), role: .destructive) {
+                                appState.deleteNotificationTemplate(template)
+                            }
+                        }
+                    }
+                }
+
+                Button {
+                    editingTemplate = .create
+                } label: {
+                    Label(t.tr("notif_template.add"), systemImage: "plus")
+                }
+            } header: {
+                Text(t.tr("notif_template.section"))
+            } footer: {
+                Text(t.tr("notif_template.footer"))
             }
 
-            Section("Paths") {
-                LabeledContent("Support", value: AppPaths.applicationSupport.path)
-                LabeledContent("Logs", value: AppPaths.logsRoot.path)
+            Section(t.tr("settings.about")) {
+                LabeledContent("App", value: "Runly")
+                Text(t.tr("app.tagline"))
+                    .foregroundStyle(.secondary)
+                LabeledContent(t.tr("settings.mode"), value: t.tr("settings.mode.value"))
+                LabeledContent(t.tr("settings.tasks"), value: "\(appState.menuBarState.totalTasks)")
+            }
+
+            Section(t.tr("settings.paths")) {
+                LabeledContent(t.tr("settings.support"), value: AppPaths.applicationSupport.path)
+                LabeledContent(t.tr("settings.logs"), value: AppPaths.logsRoot.path)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: 320)
+        .frame(width: 560, height: 520)
         .onAppear {
             launchAtLogin = LoginItemService.isEnabled
+            appState.refresh()
+        }
+        .sheet(item: $editingTemplate) { state in
+            NotificationTemplateEditorSheet(state: state) {
+                editingTemplate = nil
+            }
+            .environment(appState)
+            .environment(localization)
+        }
+    }
+}
+
+private enum TemplateEditorState: Identifiable {
+    case create
+    case edit(NotificationTemplate)
+
+    var id: String {
+        switch self {
+        case .create: "create"
+        case .edit(let template): template.id.uuidString
+        }
+    }
+}
+
+private struct NotificationTemplateEditorSheet: View {
+    @Environment(AppState.self) private var appState
+    @Environment(LocalizationStore.self) private var localization
+    @Environment(\.dismiss) private var dismiss
+
+    let state: TemplateEditorState
+    var onDone: () -> Void
+
+    @State private var name: String = ""
+    @State private var command: String = ""
+
+    var body: some View {
+        let t = localization
+        NavigationStack {
+            Form {
+                TextField(t.tr("name"), text: $name)
+                TextField(
+                    "",
+                    text: $command,
+                    prompt: Text(t.tr("notification.cmd_placeholder")),
+                    axis: .vertical
+                )
+                .font(.system(.body, design: .monospaced))
+                .lineLimit(3...8)
+
+                if command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(t.tr("notification.vars"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(t.tr("notif_template.command_hint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle(title)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(t.tr("cancel")) {
+                        onDone()
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(t.tr("save")) {
+                        save()
+                        onDone()
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+        .frame(width: 480, height: 340)
+        .onAppear {
+            switch state {
+            case .create:
+                name = ""
+                command = ""
+            case .edit(let template):
+                name = template.name
+                command = template.command
+            }
+        }
+    }
+
+    private var title: String {
+        switch state {
+        case .create: localization.tr("notif_template.add")
+        case .edit: localization.tr("notif_template.edit")
+        }
+    }
+
+    private func save() {
+        switch state {
+        case .create:
+            appState.createNotificationTemplate(name: name, command: command)
+        case .edit(let template):
+            appState.updateNotificationTemplate(template, name: name, command: command)
         }
     }
 }

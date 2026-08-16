@@ -34,15 +34,16 @@ struct MenuBarState: Equatable {
 
     var summaryLine: String {
         if totalTasks == 0 {
-            return "No tasks"
+            return L10n.tr("mb.no_tasks")
         }
-        var parts: [String] = ["\(totalTasks) task\(totalTasks == 1 ? "" : "s")"]
+        let taskKey = totalTasks == 1 ? "mb.summary_tasks" : "mb.summary_tasks_plural"
+        var parts: [String] = [String(format: L10n.tr(taskKey), totalTasks)]
         if runningCount > 0 {
-            parts.append("\(runningCount) running")
+            parts.append(String(format: L10n.tr("mb.summary_running"), runningCount))
         } else if failedCount > 0 {
-            parts.append("\(failedCount) failed")
+            parts.append(String(format: L10n.tr("mb.summary_failed"), failedCount))
         } else if scheduledCount > 0 {
-            parts.append("\(scheduledCount) scheduled")
+            parts.append(String(format: L10n.tr("mb.summary_scheduled"), scheduledCount))
         }
         return parts.joined(separator: " · ")
     }

@@ -3,9 +3,11 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @Environment(LocalizationStore.self) private var localization
     @State private var viewModel = DashboardViewModel()
 
     var body: some View {
+        let _ = localization.revision
         NavigationSplitView {
             SidebarView(viewModel: viewModel)
         } content: {
@@ -15,16 +17,16 @@ struct ContentView: View {
             detailColumn
         }
         .navigationSplitViewStyle(.balanced)
-        .searchable(text: $viewModel.searchText, prompt: "Search tasks")
+        .searchable(text: $viewModel.searchText, prompt: localization.tr("search_tasks"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     appState.editorRoute = .create
                 } label: {
-                    Label("New Task", systemImage: "plus")
+                    Label(localization.tr("new_task"), systemImage: "plus")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
-                .help("New Task")
+                .help(localization.tr("new_task"))
             }
         }
         .onAppear {
@@ -49,10 +51,11 @@ struct ContentView: View {
                     viewModel.select(viewModel.filteredTasks.first)
                 }
             }
+            .environment(localization)
             .frame(minWidth: 560, minHeight: 680)
         }
         .alert(
-            "Something went wrong",
+            localization.tr("something_wrong"),
             isPresented: Binding(
                 get: {
                     appState.errorMessage != nil
@@ -66,7 +69,7 @@ struct ContentView: View {
                 } }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(localization.tr("ok"), role: .cancel) {
                 appState.errorMessage = nil
                 viewModel.errorMessage = nil
                 appState.launchdErrorMessage = nil
@@ -96,6 +99,9 @@ struct ContentView: View {
                 onRunNow: {
                     viewModel.runNow(task)
                 },
+                onStop: {
+                    viewModel.stop(task)
+                },
                 onRefresh: {
                     viewModel.refresh()
                     appState.refresh()
@@ -107,21 +113,21 @@ struct ContentView: View {
             )
         } else if viewModel.filteredTasks.isEmpty {
             ContentUnavailableView {
-                Label("No Tasks", systemImage: "terminal")
+                Label(localization.tr("no_tasks"), systemImage: "terminal")
             } description: {
-                Text("Create a task to schedule commands, scripts, or AI agents.\nRun anything. Automatically.")
+                Text(localization.tr("no_tasks.desc"))
                     .multilineTextAlignment(.center)
             } actions: {
-                Button("New Task") {
+                Button(localization.tr("new_task")) {
                     appState.editorRoute = .create
                 }
                 .keyboardShortcut(.defaultAction)
             }
         } else {
             ContentUnavailableView(
-                "Select a Task",
+                localization.tr("select_task"),
                 systemImage: "sidebar.left",
-                description: Text("Choose a task from the list to inspect details.")
+                description: Text(localization.tr("select_task.desc"))
             )
         }
     }
@@ -132,7 +138,6 @@ struct ContentView: View {
         if let task = viewModel.tasks.first(where: { $0.id == taskID }) {
             viewModel.select(task)
         }
-        // Keep pendingFocusRunID for TaskDetailView; clear task focus token.
         appState.pendingFocusTaskID = nil
     }
 }

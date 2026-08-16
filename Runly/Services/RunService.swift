@@ -241,12 +241,15 @@ final class RunService {
             status: status
         )
 
+        let templates = (try? modelContext.fetch(FetchDescriptor<NotificationTemplate>())) ?? []
+        let commandTemplate = NotificationService.resolveCommandTemplate(task: task, templates: templates)
         await NotificationService.maybeNotify(
             task: task,
             status: status,
             exitCode: Int(result.exitCode),
             duration: result.duration,
-            stdout: result.stdout
+            stdout: result.stdout,
+            commandTemplate: commandTemplate
         )
 
         if status != .success, status != .cancelled, attempt < task.retryCount {

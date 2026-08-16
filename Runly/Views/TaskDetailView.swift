@@ -11,14 +11,21 @@ struct TaskDetailView: View {
     var onDelete: () -> Void
     var onToggleEnabled: () -> Void
     var onRunNow: () -> Void
+    var onStop: () -> Void
     var onRefresh: () -> Void
     var initialRunID: UUID? = nil
     var onConsumeFocusRun: (() -> Void)? = nil
 
+    @Environment(AppState.self) private var appState
     @State private var selectedTab: DetailTab = .overview
     @State private var runs: [TaskRun] = []
     @State private var selectedRunID: UUID?
     @State private var launchdLoaded = false
+
+    private var isThisTaskRunning: Bool {
+        (runSession.isRunning && runSession.taskID == task.id)
+            || task.lastRunStatus == .running
+    }
 
     private enum DetailTab: String, CaseIterable, Identifiable {
         case overview
@@ -28,9 +35,9 @@ struct TaskDetailView: View {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .overview: "Overview"
-            case .runs: "Runs"
-            case .logs: "Logs"
+            case .overview: L10n.tr("overview")
+            case .runs: L10n.tr("runs")
+            case .logs: L10n.tr("logs")
             }
         }
     }
@@ -42,7 +49,7 @@ struct TaskDetailView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 12)
 
-            Picker("Section", selection: $selectedTab) {
+            Picker(L10n.tr("section"), selection: $selectedTab) {
                 ForEach(DetailTab.allCases) { tab in
                     Text(tab.title).tag(tab)
                 }
@@ -69,20 +76,31 @@ struct TaskDetailView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
             ToolbarItemGroup {
-                Button {
-                    onRunNow()
-                    selectedTab = .logs
-                } label: {
-                    Label("Run Now", systemImage: "play.fill")
+                if isThisTaskRunning {
+                    Button {
+                        onStop()
+                        selectedTab = .logs
+                    } label: {
+                        Label(L10n.tr("stop"), systemImage: "stop.fill")
+                    }
+                    .tint(.red)
+                    .keyboardShortcut(".", modifiers: [.command])
+                } else {
+                    Button {
+                        onRunNow()
+                        selectedTab = .logs
+                    } label: {
+                        Label(L10n.tr("run_now"), systemImage: "play.fill")
+                    }
+                    .disabled(runSession.isRunning)
+                    .keyboardShortcut("r", modifiers: [.command])
                 }
-                .disabled(runSession.isRunning)
-                .keyboardShortcut("r", modifiers: [.command])
 
-                Button("Edit", action: onEdit)
+                Button(L10n.tr("edit"), action: onEdit)
 
                 Menu {
-                    Button(task.enabled ? "Disable" : "Enable", action: onToggleEnabled)
-                    Button("Reload Schedule") {
+                    Button(task.enabled ? L10n.tr("disable") : L10n.tr("enable"), action: onToggleEnabled)
+                    Button(L10n.tr("reload_schedule")) {
                         let ok = LaunchdService().reload(task: task)
                         launchdLoaded = LaunchdService().isLoaded(taskID: task.id)
                         onRefresh()
@@ -91,7 +109,7 @@ struct TaskDetailView: View {
                         }
                     }
                     Divider()
-                    Button("Delete", role: .destructive, action: onDelete)
+                    Button(L10n.tr("delete"), role: .destructive, action: onDelete)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -125,13 +143,13 @@ struct TaskDetailView: View {
                 Text(task.name)
                     .font(.largeTitle.weight(.semibold))
                 Spacer()
-                Toggle(task.enabled ? "Enabled" : "Disabled", isOn: Binding(
+                Toggle(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"), isOn: Binding(
                     get: { task.enabled },
                     set: { _ in onToggleEnabled() }
                 ))
                 .toggleStyle(.switch)
                 .labelsHidden()
-                Text(task.enabled ? "Enabled" : "Disabled")
+                Text(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"))
                     .foregroundStyle(.secondary)
             }
 
@@ -146,7 +164,7 @@ struct TaskDetailView: View {
                 }
                 if runSession.isRunning, runSession.taskID == task.id {
                     Text("·").foregroundStyle(.tertiary)
-                    Label("Running", systemImage: "circle.fill")
+                    Label(L10n.tr("status.running"), systemImage: "circle.fill")
                         .foregroundStyle(.orange)
                 }
             }
@@ -158,47 +176,47 @@ struct TaskDetailView: View {
     private var overviewContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                metaCard(title: "Next Run", value: RelativeTimeFormatter.absolute(task.nextRunAt))
-                metaCard(title: "Last Run", value: RelativeTimeFormatter.absolute(task.lastRunAt))
+                metaCard(title: L10n.tr("next_run"), value: RelativeTimeFormatter.absolute(task.nextRunAt))
+                metaCard(title: L10n.tr("last_run"), value: RelativeTimeFormatter.absolute(task.lastRunAt))
                 metaCard(
-                    title: "Status",
+                    title: L10n.tr("status"),
                     value: task.lastRunStatus?.displayName
-                        ?? (task.enabled ? "Ready" : "Disabled")
+                        ?? (task.enabled ? L10n.tr("status.ready") : L10n.tr("disabled"))
                 )
                 metaCard(
-                    title: "Duration",
+                    title: L10n.tr("duration"),
                     value: task.lastRunDuration.map { String(format: "%.1fs", $0) }
                         ?? "—"
                 )
-                metaCard(title: "Timeout", value: "\(task.timeout)s")
-                metaCard(title: "Retry", value: "\(task.retryCount)")
+                metaCard(title: L10n.tr("timeout"), value: "\(task.timeout)s")
+                metaCard(title: L10n.tr("retry"), value: "\(task.retryCount)")
             }
 
-            detailSection("Command") {
+            detailSection(L10n.tr("command")) {
                 Text("$ \(previewCommand)")
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                 if !task.workingDirectory.isEmpty {
-                    labeled("Working Directory", task.workingDirectory)
+                    labeled(L10n.tr("working_directory"), task.workingDirectory)
                 }
                 if task.type == .agent {
-                    labeled("Agent Provider", task.agentProvider.displayName)
+                    labeled(L10n.tr("agent_provider"), task.agentProvider.displayName)
                     if !task.agentPrompt.isEmpty {
-                        labeled("Prompt", task.agentPrompt)
+                        labeled(L10n.tr("prompt"), task.agentPrompt)
                     }
                 }
             }
 
-            detailSection("Schedule") {
-                labeled("Type", task.scheduleType.displayName)
-                labeled("Expression", task.scheduleExpression.isEmpty ? "—" : task.scheduleExpression)
-                labeled("launchd Job", launchdLoaded ? "Loaded" : "Not loaded")
-                labeled("Retry", "\(task.retryCount)")
+            detailSection(L10n.tr("schedule")) {
+                labeled(L10n.tr("type"), task.scheduleType.displayName)
+                labeled(L10n.tr("expression"), task.scheduleExpression.isEmpty ? "—" : task.scheduleExpression)
+                labeled(L10n.tr("launchd_job"), launchdLoaded ? L10n.tr("launchd.loaded") : L10n.tr("launchd.not_loaded"))
+                labeled(L10n.tr("retry"), "\(task.retryCount)")
             }
 
-            detailSection("Environment") {
+            detailSection(L10n.tr("environment")) {
                 if task.environment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("No custom environment variables").foregroundStyle(.secondary)
+                    Text(L10n.tr("env.empty")).foregroundStyle(.secondary)
                 } else {
                     Text(task.environment)
                         .font(.system(.caption, design: .monospaced))
@@ -206,21 +224,29 @@ struct TaskDetailView: View {
                 }
             }
 
-            detailSection("Proxy") {
-                labeled("Enabled", task.proxyEnabled ? "Yes" : "No")
+            detailSection(L10n.tr("proxy")) {
+                labeled(L10n.tr("enabled"), task.proxyEnabled ? L10n.tr("yes") : L10n.tr("no"))
                 if task.proxyEnabled {
-                    labeled("HTTP", blank(task.httpProxy))
-                    labeled("HTTPS", blank(task.httpsProxy))
-                    labeled("SOCKS / ALL_PROXY", blank(task.socksProxy))
-                    labeled("NO_PROXY", blank(task.noProxy))
+                    labeled(L10n.tr("http"), blank(task.httpProxy))
+                    labeled(L10n.tr("https"), blank(task.httpsProxy))
+                    labeled(L10n.tr("socks"), blank(task.socksProxy))
+                    labeled(L10n.tr("no_proxy"), blank(task.noProxy))
                 }
             }
 
-            detailSection("Notifications") {
-                labeled("Enabled", task.notificationEnabled ? "Yes" : "No")
+            detailSection(L10n.tr("notifications")) {
+                labeled(L10n.tr("enabled"), task.notificationEnabled ? L10n.tr("yes") : L10n.tr("no"))
                 if task.notificationEnabled {
-                    labeled("Trigger", task.notificationTrigger.displayName)
-                    labeled("Command", blank(task.notificationCommand, fallback: "Default osascript"))
+                    labeled(L10n.tr("trigger"), task.notificationTrigger.displayName)
+                    if let template = appState.notificationTemplate(id: task.notificationTemplateID) {
+                        labeled(L10n.tr("notif_template.picker"), template.name)
+                        labeled(L10n.tr("notification_command"), template.preview)
+                    } else {
+                        labeled(
+                            L10n.tr("notification_command"),
+                            blank(task.notificationCommand, fallback: L10n.tr("notification.default"))
+                        )
+                    }
                 }
             }
         }
@@ -230,9 +256,9 @@ struct TaskDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             if runs.isEmpty {
                 ContentUnavailableView(
-                    "No Runs Yet",
+                    L10n.tr("no_runs"),
                     systemImage: "clock",
-                    description: Text("Press Run Now to execute this task.")
+                    description: Text(L10n.tr("no_runs.desc"))
                 )
                 .frame(maxWidth: .infinity, minHeight: 220)
             } else {
@@ -274,11 +300,34 @@ struct TaskDetailView: View {
 
     private var logsContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if runSession.isRunning, runSession.taskID == task.id {
-                Label("Live output", systemImage: "dot.radiowaves.left.and.right")
-                    .foregroundStyle(.orange)
-                LogViewer(text: runSession.liveOutput, isLive: true)
-                    .frame(minHeight: 360)
+            if isThisTaskRunning {
+                HStack {
+                    Label(L10n.tr("live_output"), systemImage: "dot.radiowaves.left.and.right")
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Button {
+                        onStop()
+                    } label: {
+                        Label(L10n.tr("stop"), systemImage: "stop.fill")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    .controlSize(.small)
+                }
+                if runSession.isRunning, runSession.taskID == task.id {
+                    LogViewer(text: runSession.liveOutput, isLive: true)
+                        .frame(minHeight: 360)
+                } else if let run = selectedRun ?? runs.first {
+                    LogViewer(text: logService.readLog(for: run), isLive: false)
+                        .frame(minHeight: 360)
+                } else {
+                    ContentUnavailableView(
+                        L10n.tr("waiting_output"),
+                        systemImage: "hourglass",
+                        description: Text(L10n.tr("stop.hint"))
+                    )
+                    .frame(minHeight: 200)
+                }
             } else if let run = selectedRun ?? runs.first {
                 HStack {
                     Text(run.startAt.formatted(date: .abbreviated, time: .standard))
@@ -290,15 +339,15 @@ struct TaskDetailView: View {
                 LogViewer(text: logService.readLog(for: run), isLive: false)
                     .frame(minHeight: 360)
                 if run.stdoutFileName != nil || run.stderrFileName != nil {
-                    Text("Also on disk: .out.log / .err.log beside the combined log.")
+                    Text(L10n.tr("logs.disk_hint"))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
             } else {
                 ContentUnavailableView(
-                    "No Logs",
+                    L10n.tr("no_logs"),
                     systemImage: "doc.text",
-                    description: Text("Run the task to capture stdout and stderr.")
+                    description: Text(L10n.tr("no_logs.desc"))
                 )
                 .frame(maxWidth: .infinity, minHeight: 220)
             }

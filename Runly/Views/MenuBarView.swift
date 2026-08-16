@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @Environment(AppState.self) private var appState
+    @Environment(LocalizationStore.self) private var localization
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
 
@@ -15,6 +16,7 @@ struct MenuBarView: View {
     }
 
     var body: some View {
+        let _ = localization.revision
         Group {
             switch screen {
             case .home:
@@ -35,6 +37,7 @@ struct MenuBarView: View {
     }
 
     private var state: MenuBarState { appState.menuBarState }
+    private var t: LocalizationStore { localization }
 
     private var homeContent: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -71,7 +74,7 @@ struct MenuBarView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Runly")
+                Text(t.tr("app.name"))
                     .font(.headline)
                 Text(state.summaryLine)
                     .font(.caption)
@@ -84,14 +87,14 @@ struct MenuBarView: View {
                 Image(systemName: "gearshape")
             }
             .buttonStyle(.borderless)
-            .help("Settings")
+            .help(t.tr("settings"))
         }
         .padding(12)
     }
 
     private var failedSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("FAILED")
+            sectionTitle(t.tr("mb.failed_section"))
             ForEach(state.failedHighlights) { item in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
@@ -104,7 +107,7 @@ struct MenuBarView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             if let code = item.exitCode {
-                                Text("Exit Code: \(code)")
+                                Text(String(format: t.tr("mb.exit_code"), code))
                                     .font(.caption2.monospacedDigit())
                                     .foregroundStyle(.tertiary)
                             }
@@ -113,19 +116,19 @@ struct MenuBarView: View {
                     }
 
                     HStack(spacing: 8) {
-                        Button("View Logs") {
+                        Button(t.tr("mb.view_logs")) {
                             appState.openRun(taskID: item.taskID, runID: item.id)
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
 
-                        Button("Run Again") {
+                        Button(t.tr("mb.run_again")) {
                             appState.runTask(id: item.taskID)
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
 
-                        Button("Dismiss") {
+                        Button(t.tr("mb.dismiss")) {
                             appState.dismissFailed(runID: item.id)
                         }
                         .buttonStyle(.borderless)
@@ -140,7 +143,7 @@ struct MenuBarView: View {
 
     private var runningSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("RUNNING")
+            sectionTitle(t.tr("mb.running_section"))
             ForEach(state.runningTasks) { item in
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -152,16 +155,16 @@ struct MenuBarView: View {
                                 .font(.subheadline.weight(.medium))
                         }
                         TimelineView(.periodic(from: .now, by: 1)) { context in
-                            Text("Running · \(elapsed(from: item.startedAt, to: context.date))")
+                            Text(String(format: t.tr("mb.running_elapsed"), elapsed(from: item.startedAt, to: context.date)))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
                     Spacer()
                     Button {
-                        appState.stopRunning()
+                        appState.stopTask(id: item.id)
                     } label: {
-                        Label("Stop", systemImage: "stop.fill")
+                        Label(t.tr("mb.stop"), systemImage: "stop.fill")
                     }
                     .labelStyle(.titleAndIcon)
                     .buttonStyle(.bordered)
@@ -174,7 +177,7 @@ struct MenuBarView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("RECENT")
+            sectionTitle(t.tr("mb.recent_section"))
             ForEach(state.recentRuns) { item in
                 Button {
                     appState.openRun(taskID: item.taskID, runID: item.id)
@@ -193,16 +196,18 @@ struct MenuBarView: View {
                         }
                         Spacer(minLength: 0)
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MenuBarRowButtonStyle())
             }
         }
     }
 
     private var upcomingSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle("UP NEXT")
+            sectionTitle(t.tr("mb.up_next_section"))
             ForEach(state.upcomingTasks) { item in
                 Button {
                     appState.openTask(item.id)
@@ -222,19 +227,25 @@ struct MenuBarView: View {
                         }
                         Spacer(minLength: 0)
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MenuBarRowButtonStyle())
             }
 
             if state.totalTasks > state.upcomingTasks.count {
                 Button {
                     appState.openDashboard()
                 } label: {
-                    Text("View All Tasks →")
+                    Text(t.tr("mb.view_all"))
                         .font(.caption.weight(.medium))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(MenuBarRowButtonStyle())
                 .foregroundStyle(.secondary)
                 .padding(.top, 2)
             }
@@ -243,9 +254,9 @@ struct MenuBarView: View {
 
     private var emptyHint: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("No scheduled agents yet")
+            Text(t.tr("mb.empty_title"))
                 .font(.subheadline.weight(.medium))
-            Text("Create a task to run commands or AI agents from the menu bar.")
+            Text(t.tr("mb.empty_desc"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -254,10 +265,10 @@ struct MenuBarView: View {
 
     private var actions: some View {
         VStack(spacing: 0) {
-            menuButton("New Task", systemImage: "plus") {
+            menuButton(t.tr("new_task"), systemImage: "plus") {
                 appState.requestNewTask()
             }
-            menuButton("Run Task", systemImage: "play.fill") {
+            menuButton(t.tr("mb.run_task"), systemImage: "play.fill") {
                 runSearch = ""
                 screen = .runPicker
             }
@@ -265,16 +276,16 @@ struct MenuBarView: View {
 
             Divider().padding(.vertical, 4)
 
-            menuButton("Open Runly", systemImage: "macwindow") {
+            menuButton(t.tr("mb.open_runly"), systemImage: "macwindow") {
                 appState.openDashboard()
             }
-            menuButton("Settings", systemImage: "gearshape") {
+            menuButton(t.tr("settings"), systemImage: "gearshape") {
                 openSettings()
             }
 
             Divider().padding(.vertical, 4)
 
-            menuButton("Quit Runly", systemImage: "power") {
+            menuButton(t.tr("mb.quit"), systemImage: "power") {
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -292,13 +303,13 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderless)
 
-                Text("Run Task")
+                Text(t.tr("mb.run_task"))
                     .font(.headline)
                 Spacer()
             }
             .padding(12)
 
-            TextField("Search…", text: $runSearch)
+            TextField(t.tr("search"), text: $runSearch)
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
@@ -326,13 +337,15 @@ struct MenuBarView: View {
                                 }
                                 Spacer()
                             }
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 8)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(MenuBarRowButtonStyle())
                     }
                 }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
             }
             .frame(maxHeight: 360)
         }
@@ -355,7 +368,7 @@ struct MenuBarView: View {
                 .padding(.vertical, 6)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MenuBarRowButtonStyle())
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -385,10 +398,10 @@ struct MenuBarView: View {
         let calendar = Calendar.current
         let time = date.formatted(date: .omitted, time: .shortened)
         if calendar.isDateInToday(date) {
-            return "Today · \(time)"
+            return String(format: t.tr("mb.today"), time)
         }
         if calendar.isDateInTomorrow(date) {
-            return "Tomorrow · \(time)"
+            return String(format: t.tr("mb.tomorrow"), time)
         }
         return date.formatted(date: .abbreviated, time: .shortened)
     }
@@ -400,6 +413,39 @@ struct MenuBarView: View {
         case .cancelled: .secondary
         case .running: .orange
         case .queued: .secondary
+        }
+    }
+}
+
+/// Hover + press highlight for Menu Bar list/action rows (`.plain` has none).
+private struct MenuBarRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        MenuBarRowButton(configuration: configuration)
+    }
+
+    private struct MenuBarRowButton: View {
+        let configuration: ButtonStyle.Configuration
+        @State private var isHovered = false
+
+        var body: some View {
+            configuration.label
+                .background {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(fillColor)
+                }
+                .onHover { hovering in
+                    isHovered = hovering
+                }
+        }
+
+        private var fillColor: Color {
+            if configuration.isPressed {
+                return Color.accentColor.opacity(0.35)
+            }
+            if isHovered {
+                return Color.primary.opacity(0.08)
+            }
+            return .clear
         }
     }
 }

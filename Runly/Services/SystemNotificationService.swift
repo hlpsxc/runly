@@ -25,15 +25,15 @@ final class SystemNotificationService: NSObject, UNUserNotificationCenterDelegat
 
         switch status {
         case .success:
-            let duration = run.duration.map { String(format: "%.0fs", $0) } ?? "—"
-            content.body = "Task completed successfully.\nDuration: \(duration)"
+            let duration = run.duration.map { String(format: "%.0fs", $0) } ?? L10n.tr("em_dash")
+            content.body = String(format: L10n.tr("notify.success_body"), duration)
         case .failed:
             let code = run.exitCode.map(String.init) ?? "?"
-            content.body = "Task failed.\nExit Code: \(code)"
+            content.body = String(format: L10n.tr("notify.failed_body"), code)
         case .timeout:
-            content.body = "Task timed out."
+            content.body = L10n.tr("notify.timeout_body")
         case .cancelled:
-            content.body = "Task cancelled."
+            content.body = L10n.tr("notify.cancelled_body")
         case .running, .queued:
             return
         }

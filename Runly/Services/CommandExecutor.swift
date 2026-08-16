@@ -42,8 +42,13 @@ final class CommandExecutor: @unchecked Sendable {
         lock.lock()
         let process = activeProcess
         lock.unlock()
-        if let process, process.isRunning {
-            process.terminate()
+        guard let process, process.isRunning else { return }
+
+        // SIGTERM first; escalate to SIGKILL if the process ignores it.
+        process.terminate()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) { [weak process] in
+            guard let process, process.isRunning else { return }
+            kill(process.processIdentifier, SIGKILL)
         }
     }
 

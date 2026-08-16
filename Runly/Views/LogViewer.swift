@@ -8,7 +8,7 @@ struct LogViewer: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                Text(text.isEmpty ? "Waiting for output…" : text)
+                Text(text.isEmpty ? L10n.tr("waiting_output") : text)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -9,9 +9,9 @@ enum TaskType: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .command: "Command"
-        case .script: "Script"
-        case .agent: "Agent"
+        case .command: L10n.tr("type.command")
+        case .script: L10n.tr("type.script")
+        case .agent: L10n.tr("type.agent")
         }
     }
 

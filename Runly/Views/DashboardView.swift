@@ -2,8 +2,10 @@ import SwiftUI
 
 struct DashboardView: View {
     @Bindable var viewModel: DashboardViewModel
+    @Environment(LocalizationStore.self) private var localization
 
     var body: some View {
+        let _ = localization.revision
         List(selection: Binding(
             get: { viewModel.selectedTaskID },
             set: { id in
@@ -14,10 +16,15 @@ struct DashboardView: View {
                 TaskRowView(task: task)
                     .tag(task.id)
                     .contextMenu {
-                        Button(task.enabled ? "Disable" : "Enable") {
+                        if viewModel.isRunning(task) {
+                            Button(localization.tr("stop")) {
+                                viewModel.stop(task)
+                            }
+                        }
+                        Button(task.enabled ? localization.tr("disable") : localization.tr("enable")) {
                             viewModel.toggleEnabled(task)
                         }
-                        Button("Delete", role: .destructive) {
+                        Button(localization.tr("delete"), role: .destructive) {
                             viewModel.delete(task)
                         }
                     }
@@ -27,9 +34,9 @@ struct DashboardView: View {
         .overlay {
             if viewModel.filteredTasks.isEmpty {
                 ContentUnavailableView(
-                    "No Matching Tasks",
+                    localization.tr("no_matching"),
                     systemImage: "line.3.horizontal.decrease.circle",
-                    description: Text("Try another filter or create a new task.")
+                    description: Text(localization.tr("no_matching.desc"))
                 )
             }
         }

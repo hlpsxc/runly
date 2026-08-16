@@ -2,10 +2,12 @@ import SwiftUI
 
 struct SidebarView: View {
     @Bindable var viewModel: DashboardViewModel
+    @Environment(LocalizationStore.self) private var localization
 
     var body: some View {
+        let _ = localization.revision
         List(selection: $viewModel.filter) {
-            Section("Library") {
+            Section(localization.tr("library")) {
                 ForEach(SidebarFilter.allCases) { filter in
                     Label {
                         HStack {
@@ -26,9 +28,9 @@ struct SidebarView: View {
         .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 260)
         .safeAreaInset(edge: .bottom) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Runly")
+                Text(localization.tr("app.name"))
                     .font(.headline)
-                Text("Run anything. Automatically.")
+                Text(localization.tr("app.tagline"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

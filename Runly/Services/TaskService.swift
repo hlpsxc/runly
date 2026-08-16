@@ -103,10 +103,41 @@ struct TaskDraft: Equatable {
     var notificationEnabled: Bool = false
     var notificationCommand: String = ""
     var notificationTrigger: NotificationTrigger = .always
+    var notificationTemplateID: UUID? = nil
     var timeout: Int = 300
     var retryCount: Int = 0
     var agentProvider: AgentProvider = .claude
     var agentPrompt: String = ""
+
+    /// UI selection for notification command source.
+    enum NotificationSource: Hashable {
+        case system
+        case template(UUID)
+        case custom
+    }
+
+    var notificationSource: NotificationSource {
+        get {
+            if let id = notificationTemplateID {
+                return .template(id)
+            }
+            if notificationCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return .system
+            }
+            return .custom
+        }
+        set {
+            switch newValue {
+            case .system:
+                notificationTemplateID = nil
+                notificationCommand = ""
+            case .template(let id):
+                notificationTemplateID = id
+            case .custom:
+                notificationTemplateID = nil
+            }
+        }
+    }
 
     static func from(_ task: RunlyTask) -> TaskDraft {
         TaskDraft(
@@ -127,6 +158,7 @@ struct TaskDraft: Equatable {
             notificationEnabled: task.notificationEnabled,
             notificationCommand: task.notificationCommand,
             notificationTrigger: task.notificationTrigger,
+            notificationTemplateID: task.notificationTemplateID,
             timeout: task.timeout,
             retryCount: task.retryCount,
             agentProvider: task.agentProvider,
@@ -164,6 +196,7 @@ struct TaskDraft: Equatable {
             notificationEnabled: copy.notificationEnabled,
             notificationCommand: copy.notificationCommand,
             notificationTrigger: copy.notificationTrigger,
+            notificationTemplateID: copy.notificationTemplateID,
             timeout: max(0, copy.timeout),
             retryCount: max(0, copy.retryCount),
             agentProvider: copy.agentProvider,
@@ -193,6 +226,7 @@ struct TaskDraft: Equatable {
         task.notificationEnabled = copy.notificationEnabled
         task.notificationCommand = copy.notificationCommand
         task.notificationTrigger = copy.notificationTrigger
+        task.notificationTemplateID = copy.notificationTemplateID
         task.timeout = max(0, copy.timeout)
         task.retryCount = max(0, copy.retryCount)
         task.agentProvider = copy.agentProvider

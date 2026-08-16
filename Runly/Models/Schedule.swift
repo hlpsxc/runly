@@ -11,11 +11,11 @@ enum ScheduleType: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .once: "Once"
-        case .interval: "Interval"
-        case .daily: "Daily"
-        case .weekly: "Weekly"
-        case .cron: "Cron"
+        case .once: L10n.tr("schedule.once")
+        case .interval: L10n.tr("schedule.interval")
+        case .daily: L10n.tr("schedule.daily")
+        case .weekly: L10n.tr("schedule.weekly")
+        case .cron: L10n.tr("schedule.cron")
         }
     }
 }
@@ -30,10 +30,10 @@ enum NotificationTrigger: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .always: "Always"
-        case .onSuccess: "On Success"
-        case .onFailure: "On Failure"
-        case .onTimeout: "On Timeout"
+        case .always: L10n.tr("trigger.always")
+        case .onSuccess: L10n.tr("trigger.on_success")
+        case .onFailure: L10n.tr("trigger.on_failure")
+        case .onTimeout: L10n.tr("trigger.on_timeout")
         }
     }
 }
@@ -50,12 +50,12 @@ enum RunStatus: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .queued: "Queued"
-        case .running: "Running"
-        case .success: "Success"
-        case .failed: "Failed"
-        case .timeout: "Timeout"
-        case .cancelled: "Cancelled"
+        case .queued: L10n.tr("status.queued")
+        case .running: L10n.tr("status.running")
+        case .success: L10n.tr("status.success")
+        case .failed: L10n.tr("status.failed")
+        case .timeout: L10n.tr("status.timeout")
+        case .cancelled: L10n.tr("status.cancelled")
         }
     }
 
@@ -81,10 +81,10 @@ enum AgentProvider: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .claude: "Claude"
-        case .codex: "Codex"
-        case .openclaw: "OpenClaw"
-        case .custom: "Custom"
+        case .claude: L10n.tr("agent.claude")
+        case .codex: L10n.tr("agent.codex")
+        case .openclaw: L10n.tr("agent.openclaw")
+        case .custom: L10n.tr("agent.custom")
         }
     }
 

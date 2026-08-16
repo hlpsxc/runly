@@ -8,7 +8,8 @@ enum NotificationService {
         status: RunStatus,
         exitCode: Int?,
         duration: TimeInterval?,
-        stdout: String
+        stdout: String,
+        commandTemplate: String
     ) async {
         guard task.notificationEnabled else { return }
         guard shouldNotify(trigger: task.notificationTrigger, status: status) else { return }
@@ -22,13 +23,12 @@ enum NotificationService {
             stdout: stdout
         )
 
-        let commandTemplate = task.notificationCommand.trimmingCharacters(in: .whitespacesAndNewlines)
         let env = ProcessInfo.processInfo.environment
 
         let spec: CommandSpec
         if commandTemplate.isEmpty {
             let body = TemplateEngine.render(
-                "Task {{task_name}} finished: {{status}}",
+                L10n.tr("notify.finished"),
                 values: values
             )
             let script = "display notification \"\(escapeForAppleScript(body))\" with title \"Runly\""
@@ -58,6 +58,18 @@ enum NotificationService {
         }
 
         _ = try? await executor.run(spec)
+    }
+
+    /// Prefer shared template command when `notificationTemplateID` is set.
+    static func resolveCommandTemplate(
+        task: RunlyTask,
+        templates: [NotificationTemplate]
+    ) -> String {
+        if let id = task.notificationTemplateID,
+           let template = templates.first(where: { $0.id == id }) {
+            return template.command.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return task.notificationCommand.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Prefer newline argv, then quote-aware tokenization, before shell.
@@ -113,35 +125,5 @@ enum NotificationService {
         text
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
-    }
-}
-
-enum ShellQuoteTokenizer {
-    /// Lightweight tokenizer: splits on whitespace, respects single/double quotes.
-    static func tokenize(_ input: String) -> [String] {
-        var tokens: [String] = []
-        var current = ""
-        var inSingle = false
-        var inDouble = false
-
-        for char in input {
-            switch char {
-            case "'" where !inDouble:
-                inSingle.toggle()
-            case "\"" where !inSingle:
-                inDouble.toggle()
-            case let c where c.isWhitespace && !inSingle && !inDouble:
-                if !current.isEmpty {
-                    tokens.append(current)
-                    current = ""
-                }
-            default:
-                current.append(char)
-            }
-        }
-        if !current.isEmpty {
-            tokens.append(current)
-        }
-        return tokens
     }
 }

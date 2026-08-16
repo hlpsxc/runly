@@ -7,17 +7,17 @@ struct RunDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 16) {
-                labeled("Status", run.status.displayName)
-                labeled("Exit", run.exitCode.map(String.init) ?? "—")
-                labeled("Duration", run.duration.map { String(format: "%.1fs", $0) } ?? "—")
-                labeled("Started", run.startAt.formatted(date: .abbreviated, time: .standard))
+                labeled(L10n.tr("status"), run.status.displayName)
+                labeled(L10n.tr("exit"), run.exitCode.map(String.init) ?? L10n.tr("em_dash"))
+                labeled(L10n.tr("duration"), run.duration.map { String(format: "%.1fs", $0) } ?? L10n.tr("em_dash"))
+                labeled(L10n.tr("started"), run.startAt.formatted(date: .abbreviated, time: .standard))
             }
 
             LogViewer(text: logText, isLive: false)
                 .frame(minHeight: 320)
         }
         .padding(20)
-        .navigationTitle("Run")
+        .navigationTitle(L10n.tr("run"))
     }
 
     private func labeled(_ title: String, _ value: String) -> some View {

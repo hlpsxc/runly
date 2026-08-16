@@ -30,6 +30,8 @@ final class RunlyTask {
     var notificationEnabled: Bool
     var notificationCommand: String
     var notificationTriggerRaw: String
+    /// When set, notification command is resolved from the shared template.
+    var notificationTemplateID: UUID?
 
     var timeout: Int
     var retryCount: Int
@@ -120,6 +122,7 @@ final class RunlyTask {
         notificationEnabled: Bool = false,
         notificationCommand: String = "",
         notificationTrigger: NotificationTrigger = .always,
+        notificationTemplateID: UUID? = nil,
         timeout: Int = 300,
         retryCount: Int = 0,
         agentProvider: AgentProvider = .custom,
@@ -149,6 +152,7 @@ final class RunlyTask {
         self.notificationEnabled = notificationEnabled
         self.notificationCommand = notificationCommand
         self.notificationTriggerRaw = notificationTrigger.rawValue
+        self.notificationTemplateID = notificationTemplateID
         self.timeout = timeout
         self.retryCount = retryCount
         self.agentProviderRaw = agentProvider.rawValue

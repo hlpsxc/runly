@@ -13,11 +13,11 @@ enum SidebarFilter: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .all: "All Tasks"
-        case .running: "Running"
-        case .scheduled: "Scheduled"
-        case .failed: "Failed"
-        case .disabled: "Disabled"
+        case .all: L10n.tr("filter.all")
+        case .running: L10n.tr("filter.running")
+        case .scheduled: L10n.tr("filter.scheduled")
+        case .failed: L10n.tr("filter.failed")
+        case .disabled: L10n.tr("filter.disabled")
         }
     }
 
@@ -103,6 +103,18 @@ final class DashboardViewModel {
 
     func runNow(_ task: RunlyTask) {
         appState?.runTask(task)
+    }
+
+    func stop(_ task: RunlyTask) {
+        appState?.stopTask(id: task.id)
+        refresh()
+    }
+
+    func isRunning(_ task: RunlyTask) -> Bool {
+        if let appState, appState.session.isRunning, appState.session.taskID == task.id {
+            return true
+        }
+        return task.lastRunStatus == .running
     }
 
     func count(for filter: SidebarFilter) -> Int {
