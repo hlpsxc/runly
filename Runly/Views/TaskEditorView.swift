@@ -162,13 +162,54 @@ struct TaskEditorView: View {
                             Text(type.displayName).tag(type)
                         }
                     }
-                    .onChange(of: draft.scheduleType) { _, _ in refreshValidation() }
-                    TextField(t.tr("expression"), text: $draft.scheduleExpression)
-                        .onChange(of: draft.scheduleExpression) { _, _ in refreshValidation() }
+                    .onChange(of: draft.scheduleType) { _, newType in
+                        ensureScheduleDefaults(for: newType)
+                        refreshValidation()
+                    }
+
+                    switch draft.scheduleType {
+                    case .once:
+                        DatePicker(
+                            t.tr("schedule.datetime"),
+                            selection: onceDateBinding,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+                    case .daily:
+                        DatePicker(
+                            t.tr("schedule.time"),
+                            selection: dailyTimeBinding,
+                            displayedComponents: [.hourAndMinute]
+                        )
+                    case .weekly:
+                        Picker(t.tr("schedule.weekday"), selection: weeklyWeekdayBinding) {
+                            ForEach(0..<7, id: \.self) { day in
+                                Text(localizedWeekdayName(day)).tag(day)
+                            }
+                        }
+                        DatePicker(
+                            t.tr("schedule.time"),
+                            selection: weeklyTimeBinding,
+                            displayedComponents: [.hourAndMinute]
+                        )
+                    case .interval, .cron:
+                        TextField(t.tr("expression"), text: $draft.scheduleExpression)
+                            .font(.system(.body, design: .monospaced))
+                            .onChange(of: draft.scheduleExpression) { _, _ in refreshValidation() }
+                    }
+
+                    if draft.scheduleType == .once
+                        || draft.scheduleType == .daily
+                        || draft.scheduleType == .weekly {
+                        Text(draft.scheduleExpression.isEmpty ? t.tr("em_dash") : draft.scheduleExpression)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
                     let scheduleFilled = !draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     feedbackLines(
                         ids: ["schedule"],
-                        emptyHint: scheduleFilled ? nil : t.tr("schedule.hint"),
+                        emptyHint: scheduleFilled ? nil : scheduleHint(for: draft.scheduleType),
                         hasInput: scheduleFilled
                     )
                 }
@@ -376,7 +417,140 @@ struct TaskEditorView: View {
         } else {
             notificationSource = draft.notificationSource
         }
+        ensureScheduleDefaults(for: draft.scheduleType)
         refreshPreview()
+    }
+
+    private var onceDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                ScheduleCalculator.parseOnceDate(draft.scheduleExpression)
+                    ?? ScheduleCalculator.defaultOnceDate()
+            },
+            set: { newValue in
+                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(newValue)
+                refreshValidation()
+            }
+        )
+    }
+
+    private var dailyTimeBinding: Binding<Date> {
+        Binding(
+            get: { ScheduleCalculator.dateForDailyTime(draft.scheduleExpression) },
+            set: { newValue in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                draft.scheduleExpression = ScheduleCalculator.formatDailyTime(
+                    hour: comps.hour ?? 9,
+                    minute: comps.minute ?? 0
+                )
+                refreshValidation()
+            }
+        )
+    }
+
+    private var weeklyWeekdayBinding: Binding<Int> {
+        Binding(
+            get: {
+                ScheduleCalculator.parseWeekly(draft.scheduleExpression)?.weekday ?? 1
+            },
+            set: { newWeekday in
+                let time = ScheduleCalculator.parseWeekly(draft.scheduleExpression)
+                    .map { ($0.hour, $0.minute) }
+                    ?? (9, 0)
+                draft.scheduleExpression = ScheduleCalculator.formatWeekly(
+                    weekday: newWeekday,
+                    hour: time.0,
+                    minute: time.1
+                )
+                refreshValidation()
+            }
+        )
+    }
+
+    private var weeklyTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                if let weekly = ScheduleCalculator.parseWeekly(draft.scheduleExpression) {
+                    return ScheduleCalculator.date(settingHour: weekly.hour, minute: weekly.minute)
+                }
+                return ScheduleCalculator.date(settingHour: 9, minute: 0)
+            },
+            set: { newValue in
+                let weekday = ScheduleCalculator.parseWeekly(draft.scheduleExpression)?.weekday ?? 1
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                draft.scheduleExpression = ScheduleCalculator.formatWeekly(
+                    weekday: weekday,
+                    hour: comps.hour ?? 9,
+                    minute: comps.minute ?? 0
+                )
+                refreshValidation()
+            }
+        )
+    }
+
+    private func ensureScheduleDefaults(for type: ScheduleType) {
+        let expr = draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch type {
+        case .once:
+            if let date = ScheduleCalculator.parseOnceDate(expr) {
+                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(date)
+            } else {
+                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(
+                    ScheduleCalculator.defaultOnceDate()
+                )
+            }
+        case .daily:
+            if let time = ScheduleCalculator.parseDailyTime(expr.isEmpty ? "09:00" : expr) {
+                draft.scheduleExpression = ScheduleCalculator.formatDailyTime(
+                    hour: time.hour,
+                    minute: time.minute
+                )
+            } else {
+                draft.scheduleExpression = "09:00"
+            }
+        case .weekly:
+            if let weekly = ScheduleCalculator.parseWeekly(expr.isEmpty ? "Mon 09:00" : expr) {
+                draft.scheduleExpression = ScheduleCalculator.formatWeekly(
+                    weekday: weekly.weekday,
+                    hour: weekly.hour,
+                    minute: weekly.minute
+                )
+            } else {
+                draft.scheduleExpression = "Mon 09:00"
+            }
+        case .interval:
+            if expr.isEmpty || ScheduleCalculator.intervalSeconds(expression: expr) == nil {
+                draft.scheduleExpression = "Every day"
+            }
+        case .cron:
+            let parts = expr.split(whereSeparator: \.isWhitespace)
+            if expr.isEmpty || parts.count < 5 {
+                draft.scheduleExpression = "0 9 * * *"
+            }
+        }
+    }
+
+    private func scheduleHint(for type: ScheduleType) -> String {
+        switch type {
+        case .once: localization.tr("schedule.hint.once")
+        case .interval: localization.tr("schedule.hint.interval")
+        case .daily: localization.tr("schedule.hint.daily")
+        case .weekly: localization.tr("schedule.hint.weekly")
+        case .cron: localization.tr("schedule.hint.cron")
+        }
+    }
+
+    private func localizedWeekdayName(_ launchdWeekday: Int) -> String {
+        // Calendar weekday: 1=Sunday … 7=Saturday
+        let calendarWeekday = launchdWeekday + 1
+        let symbols = Calendar.current.weekdaySymbols
+        guard symbols.indices.contains(calendarWeekday - 1) else {
+            guard ScheduleCalculator.weekdayAbbreviations.indices.contains(launchdWeekday) else {
+                return "Mon"
+            }
+            return ScheduleCalculator.weekdayAbbreviations[launchdWeekday]
+        }
+        return symbols[calendarWeekday - 1]
     }
 
     private var hasCommandInput: Bool {

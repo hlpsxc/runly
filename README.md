@@ -41,7 +41,8 @@ Schedule → Execute → Log → Notify
 ### Scheduling & execution
 
 - **Schedule**: Once · Interval · Daily · Weekly · Cron (best-effort)
-- **launchd**: one agent per task at `~/Library/LaunchAgents/com.runly.task.<UUID>.plist`
+- **Minute precision**: Once / Daily / Weekly use date & time pickers (to the minute); expressions store as `yyyy-MM-dd HH:mm`, `HH:mm`, or `Mon HH:mm`
+- **launchd**: one agent per task at `~/Library/LaunchAgents/com.runly.task.<UUID>.plist` (calendar Hour + Minute)
 - **Run Now**: run immediately without changing the schedule
 - **Timeout / Retry**: kill on timeout; retry on failure
 - **Stop**: cancel a running task
@@ -69,8 +70,9 @@ Schedule → Execute → Log → Notify
 ### Editor
 
 - **Paste Command Line**: paste a full CLI (`\` continuations and quotes) → Command + Arguments
+- Schedule UI: date/time pickers for Once · Daily · Weekly; text expression for Interval · Cron
 - Placeholders / example hints hide once you type; replaced by parse or validation feedback
-- Basic validation: empty command, unbalanced quotes, env format, missing paths, … (errors block Save)
+- Basic validation: empty command, unbalanced quotes, env format, missing paths, invalid schedule, … (errors block Save)
 - **Command Preview** and **Test Run**
 
 ### Agent CLI / Skills
@@ -168,6 +170,14 @@ Runly --run-task <UUID>
 
 The main window does not need to stay open.
 
+| Type | Expression (minute precision) | Example |
+| --- | --- | --- |
+| Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
+| Daily | `HH:mm` | `23:05` |
+| Weekly | `Mon HH:mm` (or `0`–`6` weekday) | `Fri 18:45` |
+| Interval | natural language / seconds | `Every 5 minutes` · `Every 3 hours` |
+| Cron | 5-field (best-effort) | `30 9 * * 1` |
+
 ### 7. CLI for agents (Cursor / Codex)
 
 Build first, then point at the binary:
@@ -196,6 +206,16 @@ export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Run
 | `status` | Counts + running / failed summary |
 
 Create options include `--type`, `--arg` (repeatable), `--cwd`, `--schedule-type`, `--schedule`, `--timeout`, `--provider`, `--prompt`, `--enabled` / `--disabled`.
+
+```bash
+# One-shot at a specific minute
+"$RUNLY" --cli create --name Briefing --command echo --arg hi \
+  --schedule-type once --schedule "2026-08-20 09:30" --json
+
+# Every weekday morning
+"$RUNLY" --cli create --name Standup --command echo --arg standup \
+  --schedule-type weekly --schedule "Mon 09:15" --json
+```
 
 Skills teach agents to use this CLI:
 

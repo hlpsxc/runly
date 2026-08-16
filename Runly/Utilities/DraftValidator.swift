@@ -88,9 +88,54 @@ enum DraftValidator {
             }
         }
 
-        if draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           draft.scheduleType != .once {
+        let scheduleExpr = draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines)
+        if scheduleExpr.isEmpty {
             result.append(Message(id: "schedule", severity: .warning, text: L10n.tr("validate.schedule_empty")))
+        } else {
+            switch draft.scheduleType {
+            case .once:
+                if let date = ScheduleCalculator.parseOnceDate(scheduleExpr) {
+                    if date <= .now {
+                        result.append(Message(
+                            id: "schedule",
+                            severity: .warning,
+                            text: L10n.tr("validate.schedule_once_past")
+                        ))
+                    }
+                } else {
+                    result.append(Message(
+                        id: "schedule",
+                        severity: .error,
+                        text: L10n.tr("validate.schedule_once_invalid")
+                    ))
+                }
+            case .daily:
+                if ScheduleCalculator.parseDailyTime(scheduleExpr) == nil {
+                    result.append(Message(
+                        id: "schedule",
+                        severity: .error,
+                        text: L10n.tr("validate.schedule_daily_invalid")
+                    ))
+                }
+            case .weekly:
+                if ScheduleCalculator.parseWeekly(scheduleExpr) == nil {
+                    result.append(Message(
+                        id: "schedule",
+                        severity: .error,
+                        text: L10n.tr("validate.schedule_weekly_invalid")
+                    ))
+                }
+            case .interval:
+                if ScheduleCalculator.intervalSeconds(expression: scheduleExpr) == nil {
+                    result.append(Message(
+                        id: "schedule",
+                        severity: .error,
+                        text: L10n.tr("validate.schedule_interval_invalid")
+                    ))
+                }
+            case .cron:
+                break
+            }
         }
 
         if draft.timeout < 0 {

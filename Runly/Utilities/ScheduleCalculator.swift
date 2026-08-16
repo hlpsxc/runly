@@ -35,8 +35,9 @@ enum ScheduleCalculator {
 
     static func parseDailyTime(_ expression: String) -> (hour: Int, minute: Int)? {
         let expr = expression.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Accept "9:05", "09:05", "09:05:00"
         let parts = expr.split(separator: ":")
-        guard parts.count == 2,
+        guard parts.count >= 2,
               let hour = Int(parts[0]),
               let minute = Int(parts[1]),
               (0...23).contains(hour),
@@ -47,7 +48,7 @@ enum ScheduleCalculator {
     }
 
     static func parseWeekly(_ expression: String) -> (weekday: Int, hour: Int, minute: Int)? {
-        // Formats: "Mon 09:00", "1 09:00" (1=Sunday launchd style… we use 1=Mon ISO-ish mapped to launchd)
+        // Formats: "Mon 09:00", "1 09:00" (launchd weekday: 0=Sunday … 6=Saturday)
         let expr = expression.trimmingCharacters(in: .whitespacesAndNewlines)
         let tokens = expr.split(whereSeparator: \.isWhitespace)
         guard tokens.count >= 2 else { return nil }
@@ -60,22 +61,72 @@ enum ScheduleCalculator {
             // Accept 0/7 = Sunday … 6 = Saturday (launchd uses 0=Sunday)
             weekday = number == 7 ? 0 : number
         } else {
-            let map: [String: Int] = [
-                "sun": 0, "sunday": 0,
-                "mon": 1, "monday": 1,
-                "tue": 2, "tues": 2, "tuesday": 2,
-                "wed": 3, "wednesday": 3,
-                "thu": 4, "thur": 4, "thurs": 4, "thursday": 4,
-                "fri": 5, "friday": 5,
-                "sat": 6, "saturday": 6
-            ]
-            weekday = map[dayToken]
+            weekday = weekdayAbbreviationMap[dayToken]
         }
         guard let weekday else { return nil }
         return (weekday, time.hour, time.minute)
     }
 
+    /// Parses a one-shot absolute datetime (minute precision).
+    static func parseOnceDate(_ expression: String) -> Date? {
+        parseAbsoluteDate(expression.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    static func formatOnceDate(_ date: Date) -> String {
+        onceFormatter.string(from: date)
+    }
+
+    static func formatDailyTime(hour: Int, minute: Int) -> String {
+        String(format: "%02d:%02d", hour, minute)
+    }
+
+    static func formatWeekly(weekday: Int, hour: Int, minute: Int) -> String {
+        let day = weekdayAbbreviations[weekday] ?? "Mon"
+        return "\(day) \(formatDailyTime(hour: hour, minute: minute))"
+    }
+
+    /// Date whose hour/minute match a daily expression (for DatePicker bindings).
+    static func dateForDailyTime(_ expression: String, reference: Date = .now) -> Date {
+        let time = parseDailyTime(expression) ?? (9, 0)
+        return date(settingHour: time.hour, minute: time.minute, of: reference)
+    }
+
+    static func date(settingHour hour: Int, minute: Int, of reference: Date = .now) -> Date {
+        var calendar = Calendar.current
+        calendar.timeZone = .current
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: reference) ?? reference
+    }
+
+    /// Default one-shot: next whole minute at least one minute from now.
+    static func defaultOnceDate(after: Date = .now) -> Date {
+        let calendar = Calendar.current
+        let nextMinute = calendar.date(byAdding: .minute, value: 1, to: after) ?? after.addingTimeInterval(60)
+        let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: nextMinute)
+        return calendar.date(from: comps) ?? nextMinute
+    }
+
+    /// launchd weekday 0…6 → short English label used in expressions.
+    static let weekdayAbbreviations = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
     // MARK: - Private
+
+    private static let weekdayAbbreviationMap: [String: Int] = [
+        "sun": 0, "sunday": 0,
+        "mon": 1, "monday": 1,
+        "tue": 2, "tues": 2, "tuesday": 2,
+        "wed": 3, "wednesday": 3,
+        "thu": 4, "thur": 4, "thurs": 4, "thursday": 4,
+        "fri": 5, "friday": 5,
+        "sat": 6, "saturday": 6
+    ]
+
+    private static let onceFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter
+    }()
 
     private static func parseIntervalSeconds(_ expression: String) -> Int? {
         let lower = expression.lowercased()
@@ -105,10 +156,23 @@ enum ScheduleCalculator {
     private static func parseAbsoluteDate(_ expression: String) -> Date? {
         guard !expression.isEmpty else { return nil }
         let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = iso.date(from: expression) { return date }
+        iso.formatOptions = [.withInternetDateTime]
+        if let date = iso.date(from: expression) { return date }
+
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        for format in ["yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"] {
+        formatter.timeZone = .current
+        for format in [
+            "yyyy-MM-dd HH:mm",
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy/MM/dd HH:mm",
+            "yyyy/MM/dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd"
+        ] {
             formatter.dateFormat = format
             if let date = formatter.date(from: expression) { return date }
         }

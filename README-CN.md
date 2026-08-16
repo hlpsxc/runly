@@ -41,7 +41,8 @@ Schedule → Execute → Log → Notify
 ### 调度与执行
 
 - **Schedule**：Once · Interval · Daily · Weekly · Cron（best-effort）
-- **launchd**：每个任务对应 `~/Library/LaunchAgents/com.runly.task.<UUID>.plist`
+- **精确到分钟**：Once / Daily / Weekly 使用日期与时间选择器；表达式存为 `yyyy-MM-dd HH:mm`、`HH:mm` 或 `Mon HH:mm`
+- **launchd**：每个任务对应 `~/Library/LaunchAgents/com.runly.task.<UUID>.plist`（日历字段含 Hour + Minute）
 - **Run Now**：立即执行，不改动原有日程
 - **Timeout / Retry**：超时终止、失败重试
 - **Stop**：停止正在运行的任务
@@ -69,8 +70,9 @@ Schedule → Execute → Log → Notify
 ### 编辑器
 
 - **Paste Command Line**：粘贴完整 CLI（支持 `\` 换行与引号），自动拆成 Command + Arguments
+- 日程 UI：Once · Daily · Weekly 用日期/时间选择器；Interval · Cron 用手写表达式
 - 输入后自动隐藏占位 / 示例提示，改为解析结果或校验信息
-- 基础校验：空命令、未闭合引号、环境变量格式、路径不存在等（错误阻止保存）
+- 基础校验：空命令、未闭合引号、环境变量格式、路径不存在、无效日程等（错误阻止保存）
 - **Command Preview** 与 **Test Run**
 
 ### Agent CLI / Skills
@@ -168,6 +170,14 @@ Runly --run-task <UUID>
 
 无需一直打开主窗口。
 
+| 类型 | 表达式（精确到分钟） | 示例 |
+| --- | --- | --- |
+| Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
+| Daily | `HH:mm` | `23:05` |
+| Weekly | `Mon HH:mm`（或 `0`–`6` 表示星期） | `Fri 18:45` |
+| Interval | 自然语言 / 秒数 | `Every 5 minutes` · `Every 3 hours` |
+| Cron | 5 段（best-effort） | `30 9 * * 1` |
+
 ### 7. Agent CLI（Cursor / Codex）
 
 先编译，再指定二进制：
@@ -196,6 +206,16 @@ export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Run
 | `status` | 汇总运行中 / 失败等 |
 
 `create` 还支持 `--type`、`--arg`（可重复）、`--cwd`、`--schedule-type`、`--schedule`、`--timeout`、`--provider`、`--prompt`、`--enabled` / `--disabled`。
+
+```bash
+# 指定某一分钟执行一次
+"$RUNLY" --cli create --name Briefing --command echo --arg hi \
+  --schedule-type once --schedule "2026-08-20 09:30" --json
+
+# 每周一早上
+"$RUNLY" --cli create --name Standup --command echo --arg standup \
+  --schedule-type weekly --schedule "Mon 09:15" --json
+```
 
 Skill 文档：
 
