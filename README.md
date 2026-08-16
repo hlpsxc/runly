@@ -2,92 +2,94 @@
 
 **Run anything. Automatically.**
 
-Runly 是一款面向开发者和 AI Agent 的 **macOS 原生菜单栏任务调度器**。把任意 CLI（`python`、`node`、`ffmpeg`、`git`、`claude`、`codex`、`items` …）变成可定时、可追踪、可通知的本地任务。
+[中文文档](README-CN.md)
+
+Runly is a **native macOS menu bar scheduler** for developers and AI agents. Turn any CLI (`python`, `node`, `ffmpeg`, `git`, `claude`, `codex`, `items`, …) into a local task you can schedule, track, and notify on.
 
 ```text
 Schedule → Execute → Log → Notify
 ```
 
-> 100% 本地 · 无账号 · 无云同步 · Apple 原生 API · 无第三方依赖
+> 100% local · no accounts · no cloud sync · Apple native APIs · no third-party dependencies
 
 ---
 
-## 功能一览
+## Features
 
-### 菜单栏优先（Menu Bar First）
+### Menu Bar First
 
-- 常驻顶部菜单栏（SF Symbol 螺栓图标）
-- 一眼查看：Running / Failed / Recent / Up Next
-- 快捷操作：New Task · Run Task · Stop · Open Runly · Settings
-- 失败任务可直接 View Logs / Run Again / Dismiss
-- 行项目悬停 / 按下高亮反馈
-- 默认不占 Dock（`LSUIElement`）
+- Lives in the menu bar (SF Symbol bolt icon)
+- At a glance: Running / Failed / Recent / Up Next
+- Quick actions: New Task · Run Task · Stop · Open Runly · Settings
+- Failed runs: View Logs / Run Again / Dismiss
+- Hover and press highlight on rows
+- No Dock icon by default (`LSUIElement`)
 
-### 中英文界面
+### English / Chinese UI
 
-- Settings → Language：**System / 跟随系统** · **English** · **中文**
-- 仅影响 Runly 界面，写入本地偏好；切换后立即刷新
+- Settings → Language: **System** · **English** · **中文**
+- Affects Runly UI only; preference is stored locally and applies immediately
 
-### 任务类型
+### Task types
 
-| 类型 | 说明 |
+| Type | Description |
 | --- | --- |
-| **Command** | 任意可执行文件 + 参数（一行一个参数） |
-| **Script** | 脚本路径；可执行则直接跑，否则按扩展名选解释器（python3 / node / zsh …） |
-| **Agent** | Claude / Codex / OpenClaw / Custom，最终仍落到 Executable + Arguments |
+| **Command** | Any executable + arguments (one argument per line) |
+| **Script** | Script path; run directly if executable, otherwise pick an interpreter by extension (python3 / node / zsh …) |
+| **Agent** | Claude / Codex / OpenClaw / Custom — still resolves to Executable + Arguments |
 
-### 调度与执行
+### Scheduling & execution
 
-- **Schedule**：Once · Interval · Daily · Weekly · Cron（best-effort）
-- **launchd**：每个任务对应 `~/Library/LaunchAgents/com.runly.task.<UUID>.plist`
-- **Run Now**：立即执行，不改动原有日程
-- **Timeout / Retry**：超时终止、失败重试
-- **Stop**：停止正在运行的任务
-  - 主窗口工具栏 / 日志页 / 任务列表右键 / 菜单栏 Running 区块
-  - 快捷键 `⌘.`
-  - 先 SIGTERM，仍未退出则 SIGKILL；launchd 任务额外 `launchctl kill`
+- **Schedule**: Once · Interval · Daily · Weekly · Cron (best-effort)
+- **launchd**: one agent per task at `~/Library/LaunchAgents/com.runly.task.<UUID>.plist`
+- **Run Now**: run immediately without changing the schedule
+- **Timeout / Retry**: kill on timeout; retry on failure
+- **Stop**: cancel a running task
+  - Main window toolbar / Logs tab / task list context menu / menu bar Running section
+  - Shortcut `⌘.`
+  - SIGTERM first, then SIGKILL; launchd jobs also get `launchctl kill`
 
-### 环境与代理
+### Environment & proxy
 
-- 自定义 `KEY=VALUE` 环境变量
-- GUI App 自动补齐常见 PATH（Homebrew 等），**不覆盖**用户已有 PATH
-- 任务级 HTTP / HTTPS / SOCKS / NO_PROXY（只作用于当前 Process）
+- Custom `KEY=VALUE` environment variables
+- GUI apps get common PATH entries appended (Homebrew, etc.) **without replacing** an existing PATH
+- Per-task HTTP / HTTPS / SOCKS / NO_PROXY (current process only)
 
-### 日志与通知
+### Logs & notifications
 
-- 每次执行产生 `TaskRun` 元数据（SwiftData）
-- 完整输出落盘：`~/Library/Application Support/Runly/Logs/<task-id>/`
-  - 合并日志 `.log` + 分离 `.out.log` / `.err.log`
-- 实时终端风格日志查看
-- 系统通知（点击可跳到对应 Run）
-- **通知模板**（Settings）：命名命令可跨任务复用；改模板后引用它的任务同步生效
-- 任务级可选：系统通知 · 共享模板 · 自定义命令
-- 模板变量：`{{task_name}}` `{{status}}` `{{exit_code}}` `{{duration}}` `{{stdout}}`
+- Each run creates `TaskRun` metadata (SwiftData)
+- Full output on disk: `~/Library/Application Support/Runly/Logs/<task-id>/`
+  - Combined `.log` plus split `.out.log` / `.err.log`
+- Live terminal-style log viewer
+- System notifications (click to jump to the run)
+- **Notification templates** (Settings): named commands shared across tasks; editing a template updates every task that uses it
+- Per task: system notification · shared template · custom command
+- Template variables: `{{task_name}}` `{{status}}` `{{exit_code}}` `{{duration}}` `{{stdout}}`
 
-### 编辑器
+### Editor
 
-- **Paste Command Line**：粘贴完整 CLI（支持 `\` 换行与引号），自动拆成 Command + Arguments
-- 输入后自动隐藏占位 / 示例提示，改为解析结果或校验信息
-- 基础校验：空命令、未闭合引号、环境变量格式、路径不存在等（错误阻止保存）
-- **Command Preview** 与 **Test Run**
+- **Paste Command Line**: paste a full CLI (`\` continuations and quotes) → Command + Arguments
+- Placeholders / example hints hide once you type; replaced by parse or validation feedback
+- Basic validation: empty command, unbalanced quotes, env format, missing paths, … (errors block Save)
+- **Command Preview** and **Test Run**
 
-### 其它
+### Other
 
-- **Launch at Login**（`SMAppService`，与任务 launchd 独立）
-- 主窗口 Dashboard：完整 CRUD、编辑 Schedule / Agent、历史与日志
+- **Launch at Login** (`SMAppService`, independent from per-task launchd)
+- Main Dashboard: full CRUD, schedules, agents, history, and logs
 
 ---
 
-## 系统要求
+## Requirements
 
 - macOS 14+
-- Xcode 15+（完整 Xcode，不能只用 Command Line Tools）
+- Xcode 15+ (full Xcode; Command Line Tools alone are not enough)
 
 ---
 
-## 快速开始
+## Quick start
 
-### 1. 克隆并打开
+### 1. Clone and open
 
 ```bash
 git clone git@github.com:hlpsxc/runly.git
@@ -95,90 +97,90 @@ cd runly
 open Runly.xcodeproj
 ```
 
-### 2. 运行
+### 2. Run
 
-在 Xcode 中选择目标 **My Mac**，按 **⌘R**。
+In Xcode, choose **My Mac**, then press **⌘R**.
 
-启动后请看菜单栏右侧的 **螺栓图标**（默认无 Dock 图标）。
+Look for the **bolt icon** in the menu bar (no Dock icon by default).
 
-也可用命令行构建（需指向完整 Xcode）：
+Or build from the CLI (point at full Xcode):
 
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 xcodebuild -project Runly.xcodeproj -scheme Runly -configuration Debug -destination 'platform=macOS' build
 ```
 
-### 3. 创建第一个任务
+### 3. Create your first task
 
-1. 点击菜单栏图标 → **+ New Task**（或 Open Runly → New Task）
-2. 填写例如：
+1. Menu bar icon → **+ New Task** (or Open Runly → New Task)
+2. Example:
 
-| 字段 | 示例 |
+| Field | Example |
 | --- | --- |
 | Name | Hello Runly |
 | Type | Command |
 | Command | `echo` |
-| Arguments（每行一个） | `hello from Runly` |
+| Arguments (one per line) | `hello from Runly` |
 | Schedule | Interval · `Every day` |
 
-或直接在 **Paste Command Line** 粘贴：
+Or paste into **Paste Command Line**:
 
 ```bash
 echo "hello from Runly"
 ```
 
-3. 查看 **Command Preview**，可先点 **Test Run**
-4. **Save**，然后在详情页或菜单栏 **Run Task** → 立即执行
+3. Check **Command Preview**; optionally **Test Run**
+4. **Save**, then run from the detail page or menu bar **Run Task**
 
-### 4. Agent 示例
+### 4. Agent example
 
-| 字段 | 示例 |
+| Field | Example |
 | --- | --- |
 | Type | Agent |
 | Provider | Claude |
 | Executable | `claude` |
-| Prompt | `分析 {{date}} 的 AI 新闻` |
+| Prompt | `Summarize AI news for {{date}}` |
 | Working Directory | `~/Projects/AIResearch` |
 
-模板变量：`{{date}}` `{{time}}` `{{task_name}}` `{{working_directory}}` `{{prompt}}`
+Prompt templates: `{{date}}` `{{time}}` `{{task_name}}` `{{working_directory}}` `{{prompt}}`
 
-### 5. 共享通知模板
+### 5. Shared notification templates
 
 1. Settings → **Notification Templates** → Add Template  
-2. 名称如 `Feishu`，命令填 Webhook / CLI（可留空 = 系统通知）  
-3. 编辑任务 → Notifications → Template → 选择该模板  
-4. 多个任务可共用；修改模板即可统一更新
+2. Name it (e.g. `Webhook`), set a command (empty = system notification)  
+3. Edit task → Notifications → Template → pick it  
+4. Reuse across tasks; edit the template once to update all
 
-### 6. 定时后台执行
+### 6. Background schedules
 
-保存并 **Enabled** 后，Runly 会写入 LaunchAgent。到点由 macOS 调用：
+With the task **Enabled**, Runly writes a LaunchAgent. At the scheduled time macOS runs:
 
 ```text
 Runly --run-task <UUID>
 ```
 
-无需一直打开主窗口。
+The main window does not need to stay open.
 
 ---
 
-## 使用说明
+## Usage notes
 
-### 参数写法
+### Arguments
 
-- **一行一个参数**，行内空格会保留（适合 Prompt）
-- 主执行路径使用 `Foundation.Process` + 结构化 argv，**不会**把命令拼成 shell 字符串
-- 也可用 Paste Command Line 粘贴带引号 / `\` 续行的完整 CLI
+- **One argument per line**; spaces inside a line are preserved (good for prompts)
+- Execution uses `Foundation.Process` with structured argv — commands are **not** concatenated into a shell string
+- Or paste a full CLI via Paste Command Line (quotes / `\` line breaks)
 
 ```text
 Command:  claude
 Arguments:
 -p
-分析最近 3 天的模型变化
+Summarize model changes from the last 3 days
 ```
 
 ### PATH
 
-GUI 启动时 PATH 往往与 Terminal 不同。Runly 会在现有 PATH **末尾追加**：
+GUI apps often see a different PATH than Terminal. Runly **appends** to the existing PATH:
 
 ```text
 /opt/homebrew/bin
@@ -189,11 +191,11 @@ GUI 启动时 PATH 往往与 Terminal 不同。Runly 会在现有 PATH **末尾�
 …
 ```
 
-也可在任务 Environment 中自行设置 `PATH=...`。
+You can also set `PATH=...` in the task Environment.
 
-### 代理（仅当前任务）
+### Proxy (this task only)
 
-开启 Proxy 后写入进程环境，例如：
+When Proxy is enabled, env vars are set for the process, for example:
 
 ```text
 HTTP_PROXY=http://127.0.0.1:7890
@@ -202,42 +204,42 @@ ALL_PROXY=socks5://127.0.0.1:7890
 NO_PROXY=localhost,127.0.0.1
 ```
 
-不会修改 macOS 系统全局代理。
+This does not change macOS system-wide proxy settings.
 
-### 通知
+### Notifications
 
-- **系统通知**：任务结束发 macOS 通知
-- **通知模板**：Settings 中管理，任务里引用
-- **自定义命令**：仅该任务使用；支持
+- **System notification**: macOS banner when a run finishes
+- **Notification template**: manage in Settings; reference from tasks
+- **Custom command**: per-task only; supports
 
 ```text
 {{task_name}} {{status}} {{exit_code}} {{duration}} {{stdout}}
 ```
 
-推荐多行 argv；含管道/重定向的一行命令会回退到 `zsh -lc`。  
-触发条件（Always / On Success / On Failure / On Timeout）仍按任务单独配置。
+Prefer newline argv; one-liners with pipes/redirects may fall back to `zsh -lc`.  
+Triggers (Always / On Success / On Failure / On Timeout) remain per-task.
 
-### 语言
+### Language
 
-Settings → General → Language：
+Settings → General → Language:
 
-| 选项 | 行为 |
+| Option | Behavior |
 | --- | --- |
-| System / 跟随系统 | 系统为中文系语言时用中文，否则英文 |
-| English | 强制英文 |
-| 中文 | 强制中文 |
+| System | Chinese UI if the system language is Chinese; otherwise English |
+| English | Force English |
+| 中文 | Force Chinese |
 
-### 数据位置
+### Data locations
 
-| 内容 | 路径 |
+| Data | Path |
 | --- | --- |
-| SwiftData | 应用沙盒外 Application Support（Runly 容器） |
-| 日志 | `~/Library/Application Support/Runly/Logs/` |
+| SwiftData | Application Support (Runly container) |
+| Logs | `~/Library/Application Support/Runly/Logs/` |
 | LaunchAgents | `~/Library/LaunchAgents/com.runly.task.<UUID>.plist` |
 
 ---
 
-## 界面结构
+## UI layout
 
 ```text
                  Runly
@@ -245,7 +247,7 @@ Settings → General → Language：
           ┌────────┴────────┐
           │                 │
       Menu Bar          Main Window
-   看状态 / 快跑 / 处理失败    配置 / 历史 / 完整日志
+   status / quick run      config / history / logs
           │                 │
           └────────┬────────┘
                    │
@@ -253,55 +255,57 @@ Settings → General → Language：
                    │
      TaskService · RunService · launchd
                    │
-         NotificationTemplate（共享）
+         NotificationTemplate (shared)
 ```
 
 ---
 
-## 项目结构
+## Project layout
 
 ```text
 Runly/
-├── App/           # 入口、Settings、headless --run-task
-├── Models/        # RunlyTask、TaskRun、NotificationTemplate、枚举
-├── Services/      # AppState、Executor、Logs、Notifications、Templates…
-├── Scheduler/     # LaunchAgent 生成与 launchctl
-├── Views/         # MenuBar、Dashboard、Editor、LogViewer
-├── Utilities/     # PATH、模板、日程、CLI 解析、校验、本地化
-└── Resources/     # Info.plist、Entitlements、Assets
+├── App/           # Entry, Settings, headless --run-task
+├── Models/        # RunlyTask, TaskRun, NotificationTemplate, enums
+├── Services/      # AppState, Executor, Logs, Notifications, Templates…
+├── Scheduler/     # LaunchAgent generation & launchctl
+├── Views/         # MenuBar, Dashboard, Editor, LogViewer
+├── Utilities/     # PATH, templates, schedule, CLI parse, validation, L10n
+└── Resources/     # Info.plist, Entitlements, Assets
 ```
 
-技术栈：Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · launchd · SMAppService
+Stack: Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · launchd · SMAppService
 
 ---
 
-## 已知限制
+## Known limitations
 
-- Cron 的列表/范围/步长语法为 best-effort，映射到 launchd 日历字段
-- 应用内同一时间只跑一个前台 RunSession（launchd 仍可另起进程）
-- 带管道/重定向的通知命令可能走 shell
-- 开发时若从 DerivedData 路径注册 LaunchAgent，重编译后路径会变；正式使用请固定安装位置或重新 Enable 任务
+- Cron lists/ranges/steps are best-effort, mapped to launchd calendar fields
+- Only one in-app RunSession at a time (launchd can still spawn another process)
+- Notification commands with pipes/redirects may use a shell
+- LaunchAgents registered from a DerivedData binary path change after rebuild; pin an install location or re-enable tasks
 
 ---
 
-## 开发
+## Development
 
 ```bash
-# 建议将 CLI 指向完整 Xcode
+# Point the CLI at full Xcode
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 open Runly.xcodeproj
 # ⌘R
 ```
 
-可选：用 [XcodeGen](https://github.com/yonaskolb/XcodeGen) 从 `project.yml` 重新生成工程。
+Optional: regenerate the project with [XcodeGen](https://github.com/yonaskolb/XcodeGen) from `project.yml`.
 
 ---
 
 ## License
 
-MIT（若仓库后续补充 LICENSE 文件则以该文件为准）
+MIT (if a LICENSE file is added later, that file wins)
 
 ---
 
 **Runly — A native macOS scheduler for commands and AI agents.**
+
+[中文文档](README-CN.md)
