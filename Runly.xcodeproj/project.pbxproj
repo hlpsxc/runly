@@ -46,6 +46,8 @@
 		7F6E32E23FFA4AB1BEFFEA26 /* NotificationTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB41EFABA3847E6AF523DD5 /* NotificationTemplate.swift */; };
 		8ED03B2318B6416587CD3DC9 /* NotificationTemplateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07AEE6AF40FC4B87ABE3D23A /* NotificationTemplateService.swift */; };
 		DA807FE271FC4AB7843783B7 /* DraftValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70C0B38696842DA83F6F9FD /* DraftValidator.swift */; };
+		8B6D62DFCAEF4996AB9054C0 /* RunlyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43495E16330141DB9862237C /* RunlyStore.swift */; };
+		20A7CF45006747FC85C10C52 /* RunlyCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF661D57B174617A5A8CD16 /* RunlyCLI.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +92,8 @@
 		ECB41EFABA3847E6AF523DD5 /* NotificationTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTemplate.swift; sourceTree = "<group>"; };
 		07AEE6AF40FC4B87ABE3D23A /* NotificationTemplateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTemplateService.swift; sourceTree = "<group>"; };
 		E70C0B38696842DA83F6F9FD /* DraftValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftValidator.swift; sourceTree = "<group>"; };
+		43495E16330141DB9862237C /* RunlyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunlyStore.swift; sourceTree = "<group>"; };
+		DFF661D57B174617A5A8CD16 /* RunlyCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunlyCLI.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +126,7 @@
 		EBB04C2284384E8EB79F320F /* Runly */ = {
 			isa = PBXGroup;
 			children = (
+				F176AFF068AF4086A0D1D833 /* CLI */,
 				9F874CFED79E40D9A7C828A7 /* App */,
 				172A5CCB75254951B985BA0F /* Models */,
 				90D543A21704440D8BFE1EA8 /* Services */,
@@ -222,6 +227,15 @@
 			path = Scheduler;
 			sourceTree = "<group>";
 		};
+		F176AFF068AF4086A0D1D833 /* CLI */ = {
+			isa = PBXGroup;
+			children = (
+				43495E16330141DB9862237C /* RunlyStore.swift */,
+				DFF661D57B174617A5A8CD16 /* RunlyCLI.swift */,
+			);
+			path = CLI;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -291,6 +305,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				20A7CF45006747FC85C10C52 /* RunlyCLI.swift in Sources */,
+				8B6D62DFCAEF4996AB9054C0 /* RunlyStore.swift in Sources */,
 				DA807FE271FC4AB7843783B7 /* DraftValidator.swift in Sources */,
 				8ED03B2318B6416587CD3DC9 /* NotificationTemplateService.swift in Sources */,
 				7F6E32E23FFA4AB1BEFFEA26 /* NotificationTemplate.swift in Sources */,

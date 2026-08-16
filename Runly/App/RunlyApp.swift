@@ -5,8 +5,11 @@ import SwiftUI
 @main
 enum RunlyMain {
     static func main() {
-        if ProcessInfo.processInfo.arguments.contains("--run-task") {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("--run-task") {
             HeadlessRunner.run()
+        } else if args.contains("--cli") || args.dropFirst().first == "cli" {
+            RunlyCLI.run(arguments: args)
         } else {
             RunlyApp.main()
         }
@@ -19,7 +22,7 @@ struct RunlyApp: App {
 
     init() {
         do {
-            let schema = Schema([RunlyTask.self, TaskRun.self, NotificationTemplate.self])
+            let schema = RunlyStore.schema
             let configuration = ModelConfiguration(
                 "Runly",
                 schema: schema,
@@ -91,13 +94,7 @@ enum HeadlessRunner {
         Task { @MainActor in
             var code: Int32 = 0
             do {
-                let schema = Schema([RunlyTask.self, TaskRun.self, NotificationTemplate.self])
-                let configuration = ModelConfiguration(
-                    "Runly",
-                    schema: schema,
-                    isStoredInMemoryOnly: false
-                )
-                let container = try ModelContainer(for: schema, configurations: [configuration])
+                let container = try RunlyStore.makeContainer()
                 let context = ModelContext(container)
                 let session = RunSession()
                 let logs = LogService()

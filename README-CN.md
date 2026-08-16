@@ -73,6 +73,13 @@ Schedule → Execute → Log → Notify
 - 基础校验：空命令、未闭合引号、环境变量格式、路径不存在等（错误阻止保存）
 - **Command Preview** 与 **Test Run**
 
+### Agent CLI / Skills
+
+- 供 Cursor / Codex 调用的无界面 CLI：`Runly --cli … --json`
+- 命令：`list` · `get` · `create` · `run` · `stop` · `enable` · `disable` · `delete` · `status`
+- 项目 Skill：[`.cursor/skills/runly`](.cursor/skills/runly/SKILL.md)（Cursor）与 [`skills/runly`](skills/runly/SKILL.md)（Codex / 共用）
+- 无子进程却仍显示 `running` 的记录会自动标为 **failed**
+
 ### 其它
 
 - **Launch at Login**（`SMAppService`，与任务 launchd 独立）
@@ -160,6 +167,40 @@ Runly --run-task <UUID>
 ```
 
 无需一直打开主窗口。
+
+### 7. Agent CLI（Cursor / Codex）
+
+先编译，再指定二进制：
+
+```bash
+export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Runly"
+# 或：/Applications/Runly.app/Contents/MacOS/Runly
+```
+
+```bash
+"$RUNLY" --cli list --json
+"$RUNLY" --cli create --name Hello --command echo --arg "hi" --json
+"$RUNLY" --cli run Hello --json
+"$RUNLY" --cli stop Hello --json
+"$RUNLY" --cli status --json
+"$RUNLY" --cli help
+```
+
+| 命令 | 作用 |
+| --- | --- |
+| `list` / `get` | 查看任务 |
+| `create` | 新建 command / script / agent |
+| `run` | 立即运行（阻塞直到结束） |
+| `stop` | 停止 GUI / launchd / 数据库中的运行态 |
+| `enable` / `disable` / `delete` | 启停与删除 |
+| `status` | 汇总运行中 / 失败等 |
+
+`create` 还支持 `--type`、`--arg`（可重复）、`--cwd`、`--schedule-type`、`--schedule`、`--timeout`、`--provider`、`--prompt`、`--enabled` / `--disabled`。
+
+Skill 文档：
+
+- Cursor：`.cursor/skills/runly/SKILL.md`
+- Codex / 共用：`skills/runly/SKILL.md`
 
 ---
 
@@ -265,6 +306,7 @@ Settings → General → Language：
 ```text
 Runly/
 ├── App/           # 入口、Settings、headless --run-task
+├── CLI/           # Agent 用 --cli（list/create/run/stop…）
 ├── Models/        # RunlyTask、TaskRun、NotificationTemplate、枚举
 ├── Services/      # AppState、Executor、Logs、Notifications、Templates…
 ├── Scheduler/     # LaunchAgent 生成与 launchctl
@@ -273,6 +315,7 @@ Runly/
 └── Resources/     # Info.plist、Entitlements、Assets
 ```
 
+另有：`.cursor/skills/runly` · `skills/runly` — Cursor / Codex Agent Skill。
 技术栈：Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · launchd · SMAppService
 
 ---

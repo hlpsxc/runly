@@ -24,6 +24,7 @@ final class AppState {
 
     private(set) var allTasks: [RunlyTask] = []
     private(set) var notificationTemplates: [NotificationTemplate] = []
+    private var orphanWatchTask: Task<Void, Never>?
 
     init(container: ModelContainer) {
         self.container = container
@@ -42,12 +43,63 @@ final class AppState {
         self.runService.onStateChange = { [weak self] in
             self?.refresh()
         }
+
+        // Reconcile as soon as AppState exists (MenuBar onAppear may lag).
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            _ = self.runService.reconcileOrphanedRuns()
+            self.refresh()
+            self.startOrphanWatch()
+        }
     }
 
     func bootstrap() {
         SystemNotificationService.shared.configure(appState: self)
         SystemNotificationService.shared.requestAuthorizationIfNeeded()
+        _ = runService.reconcileOrphanedRuns()
         refresh()
+        startOrphanWatch()
+        startDistributedObservers()
+    }
+
+    private func startDistributedObservers() {
+        let center = DistributedNotificationCenter.default()
+        center.addObserver(
+            forName: .runlyStopTask,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let raw = note.userInfo?["taskID"] as? String,
+                  let id = UUID(uuidString: raw) else { return }
+            Task { @MainActor in
+                self?.stopTask(id: id)
+            }
+        }
+        center.addObserver(
+            forName: .runlyRefresh,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                _ = self?.runService.reconcileOrphanedRuns()
+                self?.refresh()
+            }
+        }
+    }
+
+    private func startOrphanWatch() {
+        orphanWatchTask?.cancel()
+        orphanWatchTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                guard let self, !Task.isCancelled else { return }
+                let fixed = self.runService.reconcileOrphanedRuns()
+                if fixed > 0 {
+                    self.refresh()
+                }
+            }
+        }
     }
 
     func refresh() {

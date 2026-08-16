@@ -62,6 +62,11 @@ final class LaunchdManager: @unchecked Sendable {
         return (result?.exitCode ?? 1) == 0
     }
 
+    /// True when launchd currently has a live PID for this agent (headless `--run-task`).
+    func isJobRunning(taskID: UUID) -> Bool {
+        HeadlessProcessProbe.isRunning(taskID: taskID)
+    }
+
     /// Ask launchd to signal a running agent process (headless `--run-task`).
     func stopRunningJob(taskID: UUID) throws {
         let label = LaunchdJob.label(for: taskID)
@@ -178,5 +183,46 @@ final class LaunchdManager: @unchecked Sendable {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8) ?? ""
         return (process.terminationStatus, output)
+    }
+}
+
+/// Detects / stops a live `Runly --run-task <uuid>` process (launchd headless runner).
+enum HeadlessProcessProbe {
+    /// True when a live `Runly --run-task <uuid>` process exists.
+    static func isRunning(taskID: UUID) -> Bool {
+        !matchingPIDs(taskID: taskID).isEmpty
+    }
+
+    @discardableResult
+    static func terminate(taskID: UUID) -> Bool {
+        let pids = matchingPIDs(taskID: taskID)
+        guard !pids.isEmpty else { return false }
+        for pid in pids {
+            kill(pid, SIGTERM)
+        }
+        return true
+    }
+
+    private static func matchingPIDs(taskID: UUID) -> [pid_t] {
+        let needle = "--run-task \(taskID.uuidString)"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        process.arguments = ["-f", needle]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return []
+        }
+        guard process.terminationStatus == 0 else { return [] }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let text = String(data: data, encoding: .utf8) ?? ""
+        return text
+            .split(whereSeparator: \.isNewline)
+            .compactMap { pid_t($0.trimmingCharacters(in: .whitespaces)) }
+            .filter { $0 > 0 }
     }
 }

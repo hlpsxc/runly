@@ -44,6 +44,10 @@ final class LaunchdService {
         manager.isLoaded(taskID: taskID)
     }
 
+    func isJobRunning(taskID: UUID) -> Bool {
+        manager.isJobRunning(taskID: taskID)
+    }
+
     @discardableResult
     func stopRunningJob(taskID: UUID) -> Bool {
         do {

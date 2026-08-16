@@ -37,6 +37,13 @@ final class CommandExecutor: @unchecked Sendable {
     private weak var activeProcess: Process?
     private let cancelFlag = CancelFlag()
 
+    /// True while a child `Process` is still alive.
+    var hasLiveProcess: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return activeProcess?.isRunning == true
+    }
+
     func stop() {
         cancelFlag.markCancelled()
         lock.lock()
@@ -101,7 +108,7 @@ final class CommandExecutor: @unchecked Sendable {
 
             var timeoutItem: DispatchWorkItem?
 
-            process.terminationHandler = { [weak self] proc in
+            let finish: @Sendable (Process) -> Void = { [weak self] proc in
                 let outRemain = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
                 let errRemain = stderrPipe.fileHandleForReading.readDataToEndOfFile()
                 if !outRemain.isEmpty {
@@ -136,6 +143,10 @@ final class CommandExecutor: @unchecked Sendable {
                 settle.finish(continuation, .success(result))
             }
 
+            process.terminationHandler = { proc in
+                finish(proc)
+            }
+
             do {
                 try process.run()
             } catch {
@@ -163,6 +174,21 @@ final class CommandExecutor: @unchecked Sendable {
                 }
                 timeoutItem = item
                 DispatchQueue.global().asyncAfter(deadline: .now() + spec.timeout, execute: item)
+            }
+
+            // If the child dies without a reliable terminationHandler callback,
+            // force-complete so RunSession / SwiftData cannot stay on "running".
+            DispatchQueue.global(qos: .utility).async {
+                while !settle.isSettled {
+                    Thread.sleep(forTimeInterval: 1.0)
+                    if settle.isSettled { return }
+                    if process.isRunning { continue }
+                    // Brief grace so the normal handler can win the race.
+                    Thread.sleep(forTimeInterval: 0.75)
+                    if settle.isSettled { return }
+                    finish(process)
+                    return
+                }
             }
         }
     }
@@ -228,6 +254,12 @@ private final class CancelFlag: @unchecked Sendable {
 private final class SettleOnce: @unchecked Sendable {
     private let lock = NSLock()
     private var settled = false
+
+    var isSettled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return settled
+    }
 
     func finish(
         _ continuation: CheckedContinuation<CommandResult, Error>,

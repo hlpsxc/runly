@@ -73,6 +73,13 @@ Schedule → Execute → Log → Notify
 - Basic validation: empty command, unbalanced quotes, env format, missing paths, … (errors block Save)
 - **Command Preview** and **Test Run**
 
+### Agent CLI / Skills
+
+- Headless CLI for Cursor / Codex: `Runly --cli … --json`
+- Commands: `list` · `get` · `create` · `run` · `stop` · `enable` · `disable` · `delete` · `status`
+- Project skills: [`.cursor/skills/runly`](.cursor/skills/runly/SKILL.md) (Cursor) and [`skills/runly`](skills/runly/SKILL.md) (Codex / shared)
+- Stuck `running` rows with no live child process are auto-marked **failed**
+
 ### Other
 
 - **Launch at Login** (`SMAppService`, independent from per-task launchd)
@@ -160,6 +167,40 @@ Runly --run-task <UUID>
 ```
 
 The main window does not need to stay open.
+
+### 7. CLI for agents (Cursor / Codex)
+
+Build first, then point at the binary:
+
+```bash
+export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Runly"
+# or: /Applications/Runly.app/Contents/MacOS/Runly
+```
+
+```bash
+"$RUNLY" --cli list --json
+"$RUNLY" --cli create --name Hello --command echo --arg "hi" --json
+"$RUNLY" --cli run Hello --json
+"$RUNLY" --cli stop Hello --json
+"$RUNLY" --cli status --json
+"$RUNLY" --cli help
+```
+
+| Command | Purpose |
+| --- | --- |
+| `list` / `get` | Inspect tasks |
+| `create` | Create command / script / agent tasks |
+| `run` | Run now (blocks until finished) |
+| `stop` | Stop GUI / launchd / DB running state |
+| `enable` / `disable` / `delete` | Lifecycle |
+| `status` | Counts + running / failed summary |
+
+Create options include `--type`, `--arg` (repeatable), `--cwd`, `--schedule-type`, `--schedule`, `--timeout`, `--provider`, `--prompt`, `--enabled` / `--disabled`.
+
+Skills teach agents to use this CLI:
+
+- Cursor: `.cursor/skills/runly/SKILL.md`
+- Codex / shared: `skills/runly/SKILL.md`
 
 ---
 
@@ -265,6 +306,7 @@ Settings → General → Language:
 ```text
 Runly/
 ├── App/           # Entry, Settings, headless --run-task
+├── CLI/           # Agent-facing --cli (list/create/run/stop/…)
 ├── Models/        # RunlyTask, TaskRun, NotificationTemplate, enums
 ├── Services/      # AppState, Executor, Logs, Notifications, Templates…
 ├── Scheduler/     # LaunchAgent generation & launchctl
@@ -273,6 +315,7 @@ Runly/
 └── Resources/     # Info.plist, Entitlements, Assets
 ```
 
+Also: `.cursor/skills/runly` · `skills/runly` — agent skills for Cursor / Codex.
 Stack: Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · launchd · SMAppService
 
 ---

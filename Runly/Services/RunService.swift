@@ -58,6 +58,101 @@ final class RunService {
         appendLive("\n[runly] stop requested\n")
     }
 
+    /// Mark DB rows stuck on `.running` as `.failed` when no live child / headless process exists.
+    @discardableResult
+    func reconcileOrphanedRuns() -> Int {
+        var fixed = 0
+
+        let allRuns = (try? modelContext.fetch(FetchDescriptor<TaskRun>())) ?? []
+        let stuckRuns = allRuns.filter { $0.status == .running }
+
+        for run in stuckRuns {
+            if LaunchdService().isJobRunning(taskID: run.taskID) {
+                continue
+            }
+
+            let isCurrentSessionRun = session.isRunning && session.runID == run.id
+            if isCurrentSessionRun {
+                if executor.hasLiveProcess { continue }
+                let age = session.startedAt.map { Date().timeIntervalSince($0) } ?? 0
+                // Grace so CommandExecutor watchdog / terminationHandler can settle first.
+                if age < 15 { continue }
+            }
+
+            finalizeOrphanedRun(run, status: .failed)
+            fixed += 1
+        }
+
+        let tasks = (try? modelContext.fetch(FetchDescriptor<RunlyTask>())) ?? []
+        for task in tasks where task.lastRunStatus == .running {
+            if isActivelyExecuting(taskID: task.id) { continue }
+            let stillOpen = allRuns.contains { $0.taskID == task.id && $0.status == .running }
+            if stillOpen { continue }
+            task.lastRunStatus = .failed
+            task.lastRunAt = task.lastRunAt ?? .now
+            fixed += 1
+        }
+
+        if fixed > 0 {
+            try? modelContext.save()
+            NSLog("Runly reconciled %d orphaned running run(s)", fixed)
+            onStateChange?()
+        }
+        return fixed
+    }
+
+    private func isActivelyExecuting(taskID: UUID) -> Bool {
+        if session.isRunning, session.taskID == taskID, executor.hasLiveProcess {
+            return true
+        }
+        return LaunchdService().isJobRunning(taskID: taskID)
+    }
+
+    private func finalizeOrphanedRun(_ run: TaskRun, status: RunStatus) {
+        guard run.status == .running else { return }
+        let end = Date()
+        run.status = status
+        run.endAt = end
+        run.duration = end.timeIntervalSince(run.startAt)
+        if run.exitCode == nil {
+            run.exitCode = status == .cancelled ? 15 : 1
+        }
+
+        let note = """
+
+        [runly] process disappeared — marked \(status.rawValue)
+        Duration: \(String(format: "%.1fs", run.duration ?? 0))
+        ────────────────────────────────────
+        """
+        if let fileName = run.logFileName {
+            let url = AppPaths.logsDirectory(for: run.taskID).appendingPathComponent(fileName)
+            if let handle = try? FileHandle(forWritingTo: url) {
+                defer { try? handle.close() }
+                try? handle.seekToEnd()
+                if let data = note.data(using: .utf8) {
+                    try? handle.write(contentsOf: data)
+                }
+            }
+        }
+        logService.endRunLog(runID: run.id)
+
+        if session.runID == run.id {
+            appendLive(note)
+            session.status = status
+            session.isRunning = false
+            session.errorMessage = "Process disappeared"
+        }
+
+        let taskID = run.taskID
+        if let task = try? modelContext.fetch(
+            FetchDescriptor<RunlyTask>(predicate: #Predicate { $0.id == taskID })
+        ).first, task.lastRunStatus == .running || task.lastRunStatus == nil {
+            task.lastRunStatus = status
+            task.lastRunDuration = run.duration
+            task.lastRunAt = end
+        }
+    }
+
     func runNow(_ task: RunlyTask) async {
         guard !session.isRunning else {
             session.errorMessage = "Another task is already running."
@@ -115,6 +210,36 @@ final class RunService {
         defer { session.isRunning = false }
 
         _ = try await execute(task: task, attempt: 0)
+        task.lastRunAt = .now
+        task.nextRunAt = ScheduleCalculator.nextRunDate(
+            type: task.scheduleType,
+            expression: task.scheduleExpression,
+            enabled: task.enabled
+        )
+        try modelContext.save()
+    }
+
+    /// CLI / agent “Run Now” — runs even when the task is disabled.
+    func runFromCLI(taskID: UUID) async throws {
+        let id = taskID
+        let descriptor = FetchDescriptor<RunlyTask>(predicate: #Predicate { $0.id == id })
+        guard let task = try modelContext.fetch(descriptor).first else {
+            throw CommandExecutorError.failedToStart("Task not found: \(taskID)")
+        }
+
+        session.reset()
+        session.isRunning = true
+        session.taskID = task.id
+        session.status = .running
+        session.startedAt = .now
+        defer {
+            session.isRunning = false
+            onStateChange?()
+        }
+
+        let result = try await execute(task: task, attempt: 0)
+        session.status = result
+        task.lastRunStatus = result
         task.lastRunAt = .now
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
