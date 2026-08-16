@@ -207,11 +207,22 @@ final class AppState {
     }
 
     func setEnabled(_ task: RunlyTask, enabled: Bool) {
+        let taskID = task.id
         do {
             try taskService.setEnabled(task, enabled: enabled)
             refresh()
         } catch {
             errorMessage = error.localizedDescription
+            return
+        }
+
+        // launchctl wait must not run inside a SwiftUI binding/layout turn.
+        Task { @MainActor in
+            if let latest = allTasks.first(where: { $0.id == taskID })
+                ?? (try? taskService.fetchAll().first { $0.id == taskID }) {
+                taskService.syncLaunchd(latest)
+                refresh()
+            }
         }
     }
 

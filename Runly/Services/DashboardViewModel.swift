@@ -97,7 +97,11 @@ final class DashboardViewModel {
     }
 
     func toggleEnabled(_ task: RunlyTask) {
-        appState?.setEnabled(task, enabled: !task.enabled)
+        setEnabled(task, enabled: !task.enabled)
+    }
+
+    func setEnabled(_ task: RunlyTask, enabled: Bool) {
+        appState?.setEnabled(task, enabled: enabled)
         refresh()
     }
 

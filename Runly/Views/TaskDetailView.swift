@@ -10,6 +10,7 @@ struct TaskDetailView: View {
     var onEdit: () -> Void
     var onDelete: () -> Void
     var onToggleEnabled: () -> Void
+    var onSetEnabled: ((Bool) -> Void)? = nil
     var onRunNow: () -> Void
     var onStop: () -> Void
     var onRefresh: () -> Void
@@ -49,12 +50,13 @@ struct TaskDetailView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 12)
 
-            Picker(L10n.tr("section"), selection: $selectedTab) {
+            Picker("", selection: $selectedTab) {
                 ForEach(DetailTab.allCases) { tab in
                     Text(tab.title).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .padding(.horizontal, 28)
             .padding(.bottom, 12)
 
@@ -76,37 +78,11 @@ struct TaskDetailView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
             ToolbarItemGroup {
-                if isThisTaskRunning {
-                    Button {
-                        onStop()
-                        selectedTab = .logs
-                    } label: {
-                        Label(L10n.tr("stop"), systemImage: "stop.fill")
-                    }
-                    .tint(.red)
-                    .keyboardShortcut(".", modifiers: [.command])
-                } else {
-                    Button {
-                        onRunNow()
-                        selectedTab = .logs
-                    } label: {
-                        Label(L10n.tr("run_now"), systemImage: "play.fill")
-                    }
-                    .disabled(runSession.isRunning)
-                    .keyboardShortcut("r", modifiers: [.command])
-                }
-
-                Button(L10n.tr("edit"), action: onEdit)
-
                 Menu {
-                    Button(task.enabled ? L10n.tr("disable") : L10n.tr("enable"), action: onToggleEnabled)
                     Button(L10n.tr("reload_schedule")) {
-                        let ok = LaunchdService().reload(task: task)
-                        launchdLoaded = LaunchdService().isLoaded(taskID: task.id)
+                        _ = LaunchdService().reload(task: task)
+                        refreshLaunchdLoaded()
                         onRefresh()
-                        if !ok {
-                            // Surface via refresh cycle; AppState may also hold last error.
-                        }
                     }
                     Divider()
                     Button(L10n.tr("delete"), role: .destructive, action: onDelete)
@@ -117,7 +93,7 @@ struct TaskDetailView: View {
         }
         .onAppear {
             reloadRuns()
-            launchdLoaded = LaunchdService().isLoaded(taskID: task.id)
+            refreshLaunchdLoaded()
             if let initialRunID {
                 selectedRunID = initialRunID
                 selectedTab = .logs
@@ -127,7 +103,10 @@ struct TaskDetailView: View {
         .onChange(of: task.id) { _, _ in
             selectedTab = .overview
             reloadRuns()
-            launchdLoaded = LaunchdService().isLoaded(taskID: task.id)
+            refreshLaunchdLoaded()
+        }
+        .onChange(of: task.enabled) { _, _ in
+            refreshLaunchdLoaded()
         }
         .onChange(of: runSession.isRunning) { _, running in
             if !running {
@@ -137,20 +116,69 @@ struct TaskDetailView: View {
         }
     }
 
+    private func refreshLaunchdLoaded() {
+        let taskID = task.id
+        // Defer off the current SwiftUI update turn.
+        Task { @MainActor in
+            launchdLoaded = LaunchdService().isLoaded(taskID: taskID)
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center, spacing: 16) {
                 Text(task.name)
                     .font(.largeTitle.weight(.semibold))
-                Spacer()
-                Toggle(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"), isOn: Binding(
-                    get: { task.enabled },
-                    set: { _ in onToggleEnabled() }
-                ))
-                .toggleStyle(.switch)
-                .labelsHidden()
-                Text(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"))
-                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(0)
+
+                // Keep clear of the trailing toolbar (⋯); title yields space first.
+                HStack(spacing: 8) {
+                    if isThisTaskRunning {
+                        Button {
+                            onStop()
+                            selectedTab = .logs
+                        } label: {
+                            Label(L10n.tr("stop"), systemImage: "stop.fill")
+                        }
+                        .tint(.red)
+                        .keyboardShortcut(".", modifiers: [.command])
+                    } else {
+                        Button {
+                            onRunNow()
+                            selectedTab = .logs
+                        } label: {
+                            Label(L10n.tr("run_now"), systemImage: "play.fill")
+                        }
+                        .disabled(runSession.isRunning)
+                        .keyboardShortcut("r", modifiers: [.command])
+                    }
+
+                    Button(L10n.tr("edit"), action: onEdit)
+
+                    Toggle(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"), isOn: Binding(
+                        get: { task.enabled },
+                        set: { newValue in
+                            guard newValue != task.enabled else { return }
+                            if let onSetEnabled {
+                                onSetEnabled(newValue)
+                            } else {
+                                onToggleEnabled()
+                            }
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                    .accessibilityLabel(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"))
+                    Text(task.enabled ? L10n.tr("enabled") : L10n.tr("disabled"))
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
+                .padding(.trailing, 36)
             }
 
             HStack(spacing: 12) {

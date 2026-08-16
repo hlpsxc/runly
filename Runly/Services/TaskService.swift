@@ -59,6 +59,10 @@ final class TaskService {
             enabled: task.enabled
         )
         try modelContext.save()
+        // Caller should sync launchd asynchronously — never block the UI turn.
+    }
+
+    func syncLaunchd(_ task: RunlyTask) {
         _ = launchd.sync(task: task)
     }
 

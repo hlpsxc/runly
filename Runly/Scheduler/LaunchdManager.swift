@@ -57,9 +57,9 @@ final class LaunchdManager: @unchecked Sendable {
     }
 
     func isLoaded(taskID: UUID) -> Bool {
-        let label = LaunchdJob.label(for: taskID)
-        let result = try? runLaunchctl(["print", "\(domain)/\(label)"])
-        return (result?.exitCode ?? 1) == 0
+        // Avoid spawning `launchctl` on the main/UI path — that can crash inside
+        // SwiftUI layout when combined with other synchronous launchctl waits.
+        FileManager.default.fileExists(atPath: AppPaths.launchAgentPlist(for: taskID).path)
     }
 
     /// True when launchd currently has a live PID for this agent (headless `--run-task`).

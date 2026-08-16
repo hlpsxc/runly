@@ -96,6 +96,10 @@ struct ContentView: View {
                     viewModel.toggleEnabled(task)
                     appState.refresh()
                 },
+                onSetEnabled: { enabled in
+                    viewModel.setEnabled(task, enabled: enabled)
+                    appState.refresh()
+                },
                 onRunNow: {
                     viewModel.runNow(task)
                 },
