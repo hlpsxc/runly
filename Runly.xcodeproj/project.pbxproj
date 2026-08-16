@@ -1,0 +1,427 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		8556222BE0734656B184E021 /* RunlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D537045B9CF4A5192CB6FC9 /* RunlyApp.swift */; };
+		B58E40F1E3FF49F3A29F87A0 /* TaskType.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF03BCD914AA458AAB15800B /* TaskType.swift */; };
+		FA515CC55B98433DBF1B70A9 /* Schedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 839727323D5D453EA5E5C22A /* Schedule.swift */; };
+		4458CF32E64D4D25B2310CAB /* RunlyTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7CD36F9847419799404D34 /* RunlyTask.swift */; };
+		0B03D31B81694B38978CBCE4 /* TaskRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85DFBD3A2E6D4B66B9EE52EF /* TaskRun.swift */; };
+		556DB8AC0CA24FF59B6FC98D /* TaskService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F5247DF531408E89956EB1 /* TaskService.swift */; };
+		AD5CF0F7AA8D4087B8488D26 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54FA1D1F36D04FF4A7FE2055 /* DashboardViewModel.swift */; };
+		C28DFD038C0E499DA6F81BCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C99AD05AB65541BA83DA9886 /* ContentView.swift */; };
+		A5CD0848371048FDB1B23B57 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0E9ACDA05440F49AA0EADB /* SidebarView.swift */; };
+		240A978D6A1B48D082149B22 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17359E4E0B0E454085CEA800 /* DashboardView.swift */; };
+		5412F06D600B4068ADAB4047 /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2465CAF2C4B24882A109CA13 /* TaskDetailView.swift */; };
+		4147EA2CB43641FCBFB3D5D7 /* TaskEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B957DF795F644318A2870D87 /* TaskEditorView.swift */; };
+		5646015BDDAA4EF18B8DD8A5 /* RelativeTimeFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E502F4186D9D4D9B8A518005 /* RelativeTimeFormatter.swift */; };
+		A238A00B724742C3A7EE31F1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCBCA2AEF32642E688019CFE /* Assets.xcassets */; };
+		F7F1F1FF19D543F380D635E3 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34D1A8ADE588498B9229C156 /* TaskRowView.swift */; };
+		536BDCC3E36B4FE19F935305 /* LaunchdJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B13C2CC46034E4F950D17B1 /* LaunchdJob.swift */; };
+		04C42D60E0754B34B346A2F8 /* LaunchdManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F200D4872BF3418BAF6E845E /* LaunchdManager.swift */; };
+		614C08943EF844719F152ED3 /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C666B6423B1457BAFBD98B9 /* AgentService.swift */; };
+		ED3054186BEC4A9FAD3C9A95 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AB4DE89F2546CE81AAC41C /* CommandExecutor.swift */; };
+		3A2147D0917E41EF8AAD8EC3 /* LaunchdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB25DB025E44A35A2BB04AC /* LaunchdService.swift */; };
+		CF4CB5ADEA40419C8334C3CE /* LogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0913854B1A0F454EB3E3A431 /* LogService.swift */; };
+		11517BE42114420B8AECDA66 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B13AA6C09C934290B5651A31 /* NotificationService.swift */; };
+		70B4749142AC41CE95F5B845 /* RunService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D32B43F105457B9292C038 /* RunService.swift */; };
+		017CED6B511E4E9D99C74408 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D01E0CE27846B5B1E49A07 /* AppPaths.swift */; };
+		BF134BA60A144EF19E78C466 /* EnvironmentResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D861009118364961859068D1 /* EnvironmentResolver.swift */; };
+		43F31F6078BE4C7386E13614 /* ScheduleCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E758887E62946A8BF79BBF0 /* ScheduleCalculator.swift */; };
+		4BDA9DD1F3F6454AA085FBC8 /* ShellPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7992CCF736534E2381260641 /* ShellPathResolver.swift */; };
+		4F3CF9376604495CB6835EF7 /* TemplateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D7A7EE7FA848D3A7FD6670 /* TemplateEngine.swift */; };
+		518EED20BC4847C68FB24D91 /* LogViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBA0A971BDF40D89D6F3F03 /* LogViewer.swift */; };
+		0DD93862F1D049BA95BF6216 /* RunDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD162CEDE6C45FE98BF00B2 /* RunDetailView.swift */; };
+		6BE1797750334277B94A60BD /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BF02970E83F4528AC607280 /* AppState.swift */; };
+		6DA0986DC2C4485CA0FDDF6B /* MenuBarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B27E4AC1FDF48A7BE345A71 /* MenuBarState.swift */; };
+		31FF945559C744FE9C227E79 /* SystemNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DC0CBB3DA204E5DB9B28C5A /* SystemNotificationService.swift */; };
+		B57C9065DB4049C783539232 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA438040142A4F3E8CEC4E3C /* MenuBarView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B924C12AA820403895AB5380 /* Runly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8D537045B9CF4A5192CB6FC9 /* RunlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunlyApp.swift; sourceTree = "<group>"; };
+		FF03BCD914AA458AAB15800B /* TaskType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskType.swift; sourceTree = "<group>"; };
+		839727323D5D453EA5E5C22A /* Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schedule.swift; sourceTree = "<group>"; };
+		FB7CD36F9847419799404D34 /* RunlyTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunlyTask.swift; sourceTree = "<group>"; };
+		85DFBD3A2E6D4B66B9EE52EF /* TaskRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRun.swift; sourceTree = "<group>"; };
+		A3F5247DF531408E89956EB1 /* TaskService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskService.swift; sourceTree = "<group>"; };
+		54FA1D1F36D04FF4A7FE2055 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		C99AD05AB65541BA83DA9886 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AE0E9ACDA05440F49AA0EADB /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		17359E4E0B0E454085CEA800 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		2465CAF2C4B24882A109CA13 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
+		B957DF795F644318A2870D87 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
+		E502F4186D9D4D9B8A518005 /* RelativeTimeFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeTimeFormatter.swift; sourceTree = "<group>"; };
+		64B6E4063FB34E05B9CD6C88 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DCBCA2AEF32642E688019CFE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		34D1A8ADE588498B9229C156 /* TaskRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowView.swift; sourceTree = "<group>"; };
+		9B13C2CC46034E4F950D17B1 /* LaunchdJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchdJob.swift; sourceTree = "<group>"; };
+		F200D4872BF3418BAF6E845E /* LaunchdManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchdManager.swift; sourceTree = "<group>"; };
+		2C666B6423B1457BAFBD98B9 /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
+		11AB4DE89F2546CE81AAC41C /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
+		9FB25DB025E44A35A2BB04AC /* LaunchdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchdService.swift; sourceTree = "<group>"; };
+		0913854B1A0F454EB3E3A431 /* LogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogService.swift; sourceTree = "<group>"; };
+		B13AA6C09C934290B5651A31 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		28D32B43F105457B9292C038 /* RunService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunService.swift; sourceTree = "<group>"; };
+		14D01E0CE27846B5B1E49A07 /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
+		D861009118364961859068D1 /* EnvironmentResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentResolver.swift; sourceTree = "<group>"; };
+		1E758887E62946A8BF79BBF0 /* ScheduleCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleCalculator.swift; sourceTree = "<group>"; };
+		7992CCF736534E2381260641 /* ShellPathResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellPathResolver.swift; sourceTree = "<group>"; };
+		33D7A7EE7FA848D3A7FD6670 /* TemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateEngine.swift; sourceTree = "<group>"; };
+		1EBA0A971BDF40D89D6F3F03 /* LogViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewer.swift; sourceTree = "<group>"; };
+		8CD162CEDE6C45FE98BF00B2 /* RunDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDetailView.swift; sourceTree = "<group>"; };
+		7BF02970E83F4528AC607280 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		0B27E4AC1FDF48A7BE345A71 /* MenuBarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarState.swift; sourceTree = "<group>"; };
+		7DC0CBB3DA204E5DB9B28C5A /* SystemNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemNotificationService.swift; sourceTree = "<group>"; };
+		FA438040142A4F3E8CEC4E3C /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5D85D498BD8E44AF9D5301AA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		569C6D749F3348A8B66E1716 = {
+			isa = PBXGroup;
+			children = (
+				EBB04C2284384E8EB79F320F /* Runly */,
+				E198CF0999D043EA880693AD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E198CF0999D043EA880693AD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B924C12AA820403895AB5380 /* Runly.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EBB04C2284384E8EB79F320F /* Runly */ = {
+			isa = PBXGroup;
+			children = (
+				9F874CFED79E40D9A7C828A7 /* App */,
+				172A5CCB75254951B985BA0F /* Models */,
+				90D543A21704440D8BFE1EA8 /* Services */,
+				AE045861D0B24DA39F76C784 /* Scheduler */,
+				F3D6A3168AD84BB29F55AB67 /* Views */,
+				33C1F70715614AD29A7426D2 /* Utilities */,
+				C71C3EDBCCF14F03BC3DF67B /* Resources */,
+			);
+			path = Runly;
+			sourceTree = "<group>";
+		};
+		9F874CFED79E40D9A7C828A7 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				8D537045B9CF4A5192CB6FC9 /* RunlyApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		172A5CCB75254951B985BA0F /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FF03BCD914AA458AAB15800B /* TaskType.swift */,
+				839727323D5D453EA5E5C22A /* Schedule.swift */,
+				FB7CD36F9847419799404D34 /* RunlyTask.swift */,
+				85DFBD3A2E6D4B66B9EE52EF /* TaskRun.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		90D543A21704440D8BFE1EA8 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				7DC0CBB3DA204E5DB9B28C5A /* SystemNotificationService.swift */,
+				0B27E4AC1FDF48A7BE345A71 /* MenuBarState.swift */,
+				7BF02970E83F4528AC607280 /* AppState.swift */,
+				28D32B43F105457B9292C038 /* RunService.swift */,
+				B13AA6C09C934290B5651A31 /* NotificationService.swift */,
+				0913854B1A0F454EB3E3A431 /* LogService.swift */,
+				9FB25DB025E44A35A2BB04AC /* LaunchdService.swift */,
+				11AB4DE89F2546CE81AAC41C /* CommandExecutor.swift */,
+				2C666B6423B1457BAFBD98B9 /* AgentService.swift */,
+				A3F5247DF531408E89956EB1 /* TaskService.swift */,
+				54FA1D1F36D04FF4A7FE2055 /* DashboardViewModel.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F3D6A3168AD84BB29F55AB67 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				FA438040142A4F3E8CEC4E3C /* MenuBarView.swift */,
+				8CD162CEDE6C45FE98BF00B2 /* RunDetailView.swift */,
+				1EBA0A971BDF40D89D6F3F03 /* LogViewer.swift */,
+				C99AD05AB65541BA83DA9886 /* ContentView.swift */,
+				AE0E9ACDA05440F49AA0EADB /* SidebarView.swift */,
+				17359E4E0B0E454085CEA800 /* DashboardView.swift */,
+				2465CAF2C4B24882A109CA13 /* TaskDetailView.swift */,
+				B957DF795F644318A2870D87 /* TaskEditorView.swift */,
+				34D1A8ADE588498B9229C156 /* TaskRowView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		33C1F70715614AD29A7426D2 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				33D7A7EE7FA848D3A7FD6670 /* TemplateEngine.swift */,
+				7992CCF736534E2381260641 /* ShellPathResolver.swift */,
+				1E758887E62946A8BF79BBF0 /* ScheduleCalculator.swift */,
+				D861009118364961859068D1 /* EnvironmentResolver.swift */,
+				14D01E0CE27846B5B1E49A07 /* AppPaths.swift */,
+				E502F4186D9D4D9B8A518005 /* RelativeTimeFormatter.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		C71C3EDBCCF14F03BC3DF67B /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DCBCA2AEF32642E688019CFE /* Assets.xcassets */,
+				64B6E4063FB34E05B9CD6C88 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AE045861D0B24DA39F76C784 /* Scheduler */ = {
+			isa = PBXGroup;
+			children = (
+				F200D4872BF3418BAF6E845E /* LaunchdManager.swift */,
+				9B13C2CC46034E4F950D17B1 /* LaunchdJob.swift */,
+			);
+			path = Scheduler;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2479267A5D1A4A14B404672C /* Runly */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D54C0F446B3408F946FD8AA /* Build configuration list for PBXNativeTarget "Runly" */;
+			buildPhases = (
+				49715FFE8DE145068CDF7087 /* Sources */,
+				5D85D498BD8E44AF9D5301AA /* Frameworks */,
+				CCD748254F394A339D22487C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Runly;
+			productName = Runly;
+			productReference = B924C12AA820403895AB5380 /* Runly.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		88C815BEF034466A9CAB0827 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					2479267A5D1A4A14B404672C = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 99DB006C18634F298F0EAB25 /* Build configuration list for PBXProject "Runly" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 569C6D749F3348A8B66E1716;
+			productRefGroup = E198CF0999D043EA880693AD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2479267A5D1A4A14B404672C /* Runly */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CCD748254F394A339D22487C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A238A00B724742C3A7EE31F1 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		49715FFE8DE145068CDF7087 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				614C08943EF844719F152ED3 /* AgentService.swift in Sources */,
+				017CED6B511E4E9D99C74408 /* AppPaths.swift in Sources */,
+				6BE1797750334277B94A60BD /* AppState.swift in Sources */,
+				ED3054186BEC4A9FAD3C9A95 /* CommandExecutor.swift in Sources */,
+				C28DFD038C0E499DA6F81BCF /* ContentView.swift in Sources */,
+				240A978D6A1B48D082149B22 /* DashboardView.swift in Sources */,
+				AD5CF0F7AA8D4087B8488D26 /* DashboardViewModel.swift in Sources */,
+				BF134BA60A144EF19E78C466 /* EnvironmentResolver.swift in Sources */,
+				536BDCC3E36B4FE19F935305 /* LaunchdJob.swift in Sources */,
+				04C42D60E0754B34B346A2F8 /* LaunchdManager.swift in Sources */,
+				3A2147D0917E41EF8AAD8EC3 /* LaunchdService.swift in Sources */,
+				CF4CB5ADEA40419C8334C3CE /* LogService.swift in Sources */,
+				518EED20BC4847C68FB24D91 /* LogViewer.swift in Sources */,
+				6DA0986DC2C4485CA0FDDF6B /* MenuBarState.swift in Sources */,
+				B57C9065DB4049C783539232 /* MenuBarView.swift in Sources */,
+				11517BE42114420B8AECDA66 /* NotificationService.swift in Sources */,
+				5646015BDDAA4EF18B8DD8A5 /* RelativeTimeFormatter.swift in Sources */,
+				0DD93862F1D049BA95BF6216 /* RunDetailView.swift in Sources */,
+				70B4749142AC41CE95F5B845 /* RunService.swift in Sources */,
+				8556222BE0734656B184E021 /* RunlyApp.swift in Sources */,
+				4458CF32E64D4D25B2310CAB /* RunlyTask.swift in Sources */,
+				FA515CC55B98433DBF1B70A9 /* Schedule.swift in Sources */,
+				43F31F6078BE4C7386E13614 /* ScheduleCalculator.swift in Sources */,
+				4BDA9DD1F3F6454AA085FBC8 /* ShellPathResolver.swift in Sources */,
+				A5CD0848371048FDB1B23B57 /* SidebarView.swift in Sources */,
+				31FF945559C744FE9C227E79 /* SystemNotificationService.swift in Sources */,
+				5412F06D600B4068ADAB4047 /* TaskDetailView.swift in Sources */,
+				4147EA2CB43641FCBFB3D5D7 /* TaskEditorView.swift in Sources */,
+				F7F1F1FF19D543F380D635E3 /* TaskRowView.swift in Sources */,
+				0B03D31B81694B38978CBCE4 /* TaskRun.swift in Sources */,
+				556DB8AC0CA24FF59B6FC98D /* TaskService.swift in Sources */,
+				B58E40F1E3FF49F3A29F87A0 /* TaskType.swift in Sources */,
+				4F3CF9376604495CB6835EF7 /* TemplateEngine.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		DD22FAF380F749ACB9CDFC8B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		373054DACEED4549B7F066D1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		6F0E559F9D294F278400318F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Runly/Resources/Runly.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Runly/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Runly.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.runly.Runly;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		40C781C150194B1FA470A883 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Runly/Resources/Runly.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Runly/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Runly.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.runly.Runly;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		99DB006C18634F298F0EAB25 /* Build configuration list for PBXProject "Runly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD22FAF380F749ACB9CDFC8B /* Debug */,
+				373054DACEED4549B7F066D1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3D54C0F446B3408F946FD8AA /* Build configuration list for PBXNativeTarget "Runly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6F0E559F9D294F278400318F /* Debug */,
+				40C781C150194B1FA470A883 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 88C815BEF034466A9CAB0827 /* Project object */;
+}

@@ -1,0 +1,28 @@
+name: Runly
+options:
+  bundleIdPrefix: app.runly
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  SWIFT_VERSION: "5.0"
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+targets:
+  Runly:
+    type: application
+    platform: macOS
+    sources:
+      - path: Runly
+        excludes:
+          - Resources/Info.plist
+          - Resources/Runly.entitlements
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: app.runly.Runly
+      INFOPLIST_FILE: Runly/Resources/Info.plist
+      CODE_SIGN_ENTITLEMENTS: Runly/Resources/Runly.entitlements
+      GENERATE_INFOPLIST_FILE: YES
+      MARKETING_VERSION: "0.1.0"
+      CURRENT_PROJECT_VERSION: 1
+      ENABLE_HARDENED_RUNTIME: YES
+      COMBINE_HIDPI_IMAGES: YES
+      SWIFT_STRICT_CONCURRENCY: complete
