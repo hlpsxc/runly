@@ -22,12 +22,16 @@ final class AppState {
     var errorMessage: String?
     var launchdErrorMessage: String?
 
+    /// When this GUI process started (shown in Settings → About).
+    let lastLaunchedAt: Date
+
     private(set) var allTasks: [RunlyTask] = []
     private(set) var notificationTemplates: [NotificationTemplate] = []
     private var orphanWatchTask: Task<Void, Never>?
 
     init(container: ModelContainer) {
         self.container = container
+        self.lastLaunchedAt = Date()
         let context = ModelContext(container)
         let session = RunSession()
         let logService = LogService()

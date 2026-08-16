@@ -79,6 +79,10 @@ struct MenuBarView: View {
                 Text(state.summaryLine)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text("\(t.tr("settings.last_launched")) · \(formattedLastLaunched)")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .help(t.tr("settings.last_launched"))
             }
             Spacer()
             Button {
@@ -90,6 +94,14 @@ struct MenuBarView: View {
             .help(t.tr("settings"))
         }
         .padding(12)
+    }
+
+    private var formattedLastLaunched: String {
+        let formatter = DateFormatter()
+        formatter.locale = localization.language.locale
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: appState.lastLaunchedAt)
     }
 
     private var failedSection: some View {

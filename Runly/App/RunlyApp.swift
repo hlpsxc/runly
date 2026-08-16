@@ -159,6 +159,23 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section(t.tr("settings.about")) {
+                LabeledContent("App", value: "Runly")
+                Text(t.tr("app.tagline"))
+                    .foregroundStyle(.secondary)
+                LabeledContent(t.tr("settings.mode"), value: t.tr("settings.mode.value"))
+                LabeledContent(t.tr("settings.tasks"), value: "\(appState.menuBarState.totalTasks)")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(t.tr("settings.last_launched"))
+                        .foregroundStyle(.secondary)
+                    Text(formattedLastLaunched)
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 2)
+            }
+
             Section {
                 if appState.notificationTemplates.isEmpty {
                     Text(t.tr("notif_template.empty"))
@@ -202,21 +219,13 @@ struct SettingsView: View {
                 Text(t.tr("notif_template.footer"))
             }
 
-            Section(t.tr("settings.about")) {
-                LabeledContent("App", value: "Runly")
-                Text(t.tr("app.tagline"))
-                    .foregroundStyle(.secondary)
-                LabeledContent(t.tr("settings.mode"), value: t.tr("settings.mode.value"))
-                LabeledContent(t.tr("settings.tasks"), value: "\(appState.menuBarState.totalTasks)")
-            }
-
             Section(t.tr("settings.paths")) {
                 LabeledContent(t.tr("settings.support"), value: AppPaths.applicationSupport.path)
                 LabeledContent(t.tr("settings.logs"), value: AppPaths.logsRoot.path)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 560, height: 520)
+        .frame(minWidth: 560, idealWidth: 560, minHeight: 560, idealHeight: 640)
         .onAppear {
             launchAtLogin = LoginItemService.isEnabled
             appState.refresh()
@@ -228,6 +237,14 @@ struct SettingsView: View {
             .environment(appState)
             .environment(localization)
         }
+    }
+
+    private var formattedLastLaunched: String {
+        let formatter = DateFormatter()
+        formatter.locale = localization.language.locale
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: appState.lastLaunchedAt)
     }
 }
 
