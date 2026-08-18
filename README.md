@@ -40,19 +40,22 @@ Schedule → Execute → Log → Notify
 
 ### Scheduling & execution
 
-- **Schedule**: Once · Interval · Daily · Weekly · Cron (best-effort)
-- **Minute precision**: Once / Daily / Weekly use date & time pickers (to the minute); expressions store as `yyyy-MM-dd HH:mm`, `HH:mm`, or `Mon HH:mm`
-- **launchd**: one agent per task at `~/Library/LaunchAgents/com.runly.task.<UUID>.plist` (calendar Hour + Minute)
+- **Schedule**: Once · Interval · Daily · Weekly · Weekdays (Mon–Fri)
+- **Beijing time (UTC+8)**: Once / Daily / Weekly / Weekdays clock fields are always interpreted as Asia/Shanghai
+- **Minute precision**: Once / Daily / Weekly / Weekdays use date & time pickers (to the minute); expressions store as `yyyy-MM-dd HH:mm`, `HH:mm`, or `Mon HH:mm`
+- **In-process scheduler**: while Runly is running, it checks due tasks on a configurable interval (default 20 seconds). No launchd / cron.
+- **Run in iTerm** (Settings, on when iTerm2 is installed): scheduled/manual tasks open an iTerm window so they inherit iTerm’s Screen Recording / Accessibility grants. Notification commands still run in the background.
 - **Run Now**: run immediately without changing the schedule
 - **Timeout / Retry**: kill on timeout; retry on failure
 - **Stop**: cancel a running task
   - Main window toolbar / Logs tab / task list context menu / menu bar Running section
   - Shortcut `⌘.`
-  - SIGTERM first, then SIGKILL; launchd jobs also get `launchctl kill`
+  - SIGTERM first, then SIGKILL
 
 ### Environment & proxy
 
 - Custom `KEY=VALUE` environment variables
+- **Merge login shell environment by default** (exports from `~/.zshrc` / profile) so API keys work under the menu bar scheduler; toggle in Settings
 - GUI apps get common PATH entries appended (Homebrew, etc.) **without replacing** an existing PATH
 - Per-task HTTP / HTTPS / SOCKS / NO_PROXY (current process only)
 
@@ -70,7 +73,7 @@ Schedule → Execute → Log → Notify
 ### Editor
 
 - **Paste Command Line**: paste a full CLI (`\` continuations and quotes) → Command + Arguments
-- Schedule UI: date/time pickers for Once · Daily · Weekly; text expression for Interval · Cron
+- Schedule UI: date/time pickers for Once · Daily · Weekly · Weekdays; text expression for Interval
 - Placeholders / example hints hide once you type; replaced by parse or validation feedback
 - Basic validation: empty command, unbalanced quotes, env format, missing paths, invalid schedule, … (errors block Save)
 - **Command Preview** and **Test Run**
@@ -84,7 +87,7 @@ Schedule → Execute → Log → Notify
 
 ### Other
 
-- **Launch at Login** (`SMAppService`, independent from per-task launchd)
+- **Launch at Login** (`SMAppService`) — required so schedules keep firing after reboot
 - Main Dashboard: full CRUD, schedules, agents, history, and logs
 
 ---
@@ -162,21 +165,15 @@ Prompt templates: `{{date}}` `{{time}}` `{{task_name}}` `{{working_directory}}` 
 
 ### 6. Background schedules
 
-With the task **Enabled**, Runly writes a LaunchAgent. At the scheduled time macOS runs:
-
-```text
-Runly --run-task <UUID>
-```
-
-The main window does not need to stay open.
+Keep **Runly running** (Launch at Login recommended). Enabled tasks fire when the in-process poller sees `nextRunAt` in the past. Interval is **Settings → Check due tasks every N seconds** (default 20).
 
 | Type | Expression (minute precision) | Example |
 | --- | --- | --- |
 | Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
 | Daily | `HH:mm` | `23:05` |
 | Weekly | `Mon HH:mm` (or `0`–`6` weekday) | `Fri 18:45` |
+| Weekdays | `HH:mm` (Mon–Fri, Beijing) | `08:00` |
 | Interval | natural language / seconds | `Every 5 minutes` · `Every 3 hours` |
-| Cron | 5-field (best-effort) | `30 9 * * 1` |
 
 ### 7. CLI for agents (Cursor / Codex)
 
@@ -201,7 +198,7 @@ export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Run
 | `list` / `get` | Inspect tasks |
 | `create` | Create command / script / agent tasks |
 | `run` | Run now (blocks until finished) |
-| `stop` | Stop GUI / launchd / DB running state |
+| `stop` | Stop the running process and mark DB state |
 | `enable` / `disable` / `delete` | Lifecycle |
 | `status` | Counts + running / failed summary |
 
@@ -212,9 +209,9 @@ Create options include `--type`, `--arg` (repeatable), `--cwd`, `--schedule-type
 "$RUNLY" --cli create --name Briefing --command echo --arg hi \
   --schedule-type once --schedule "2026-08-20 09:30" --json
 
-# Every weekday morning
+# Every weekday morning (Mon–Fri 08:00 Beijing)
 "$RUNLY" --cli create --name Standup --command echo --arg standup \
-  --schedule-type weekly --schedule "Mon 09:15" --json
+  --schedule-type weekdays --schedule "08:00" --json
 ```
 
 Skills teach agents to use this CLI:
@@ -229,7 +226,7 @@ Skills teach agents to use this CLI:
 ### Arguments
 
 - **One argument per line**; spaces inside a line are preserved (good for prompts)
-- Execution uses `Foundation.Process` with structured argv — commands are **not** concatenated into a shell string
+- Execution uses structured argv (not a concatenated shell string). With **Run in iTerm** on, the process is started inside iTerm instead of as a `Foundation.Process` child of Runly.
 - Or paste a full CLI via Paste Command Line (quotes / `\` line breaks)
 
 ```text
@@ -296,7 +293,6 @@ Settings → General → Language:
 | --- | --- |
 | SwiftData | Application Support (Runly container) |
 | Logs | `~/Library/Application Support/Runly/Logs/` |
-| LaunchAgents | `~/Library/LaunchAgents/com.runly.task.<UUID>.plist` |
 
 ---
 
@@ -314,7 +310,7 @@ Settings → General → Language:
                    │
                 AppState
                    │
-     TaskService · RunService · launchd
+     TaskService · RunService
                    │
          NotificationTemplate (shared)
 ```
@@ -325,27 +321,26 @@ Settings → General → Language:
 
 ```text
 Runly/
-├── App/           # Entry, Settings, headless --run-task
+├── App/           # Entry, Settings
 ├── CLI/           # Agent-facing --cli (list/create/run/stop/…)
 ├── Models/        # RunlyTask, TaskRun, NotificationTemplate, enums
 ├── Services/      # AppState, Executor, Logs, Notifications, Templates…
-├── Scheduler/     # LaunchAgent generation & launchctl
+├── Scheduler/     # Legacy LaunchAgent cleanup
 ├── Views/         # MenuBar, Dashboard, Editor, LogViewer
 ├── Utilities/     # PATH, templates, schedule, CLI parse, validation, L10n
 └── Resources/     # Info.plist, Entitlements, Assets
 ```
 
 Also: `.cursor/skills/runly` · `skills/runly` — agent skills for Cursor / Codex.
-Stack: Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · launchd · SMAppService
+Stack: Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · SMAppService
 
 ---
 
 ## Known limitations
 
-- Cron lists/ranges/steps are best-effort, mapped to launchd calendar fields
-- Only one in-app RunSession at a time (launchd can still spawn another process)
+- Only one in-app RunSession at a time
+- Schedules fire only while the Runly process is running
 - Notification commands with pipes/redirects may use a shell
-- LaunchAgents registered from a DerivedData binary path change after rebuild; pin an install location or re-enable tasks
 
 ---
 

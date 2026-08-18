@@ -5,7 +5,7 @@ enum ScheduleType: String, Codable, CaseIterable, Identifiable {
     case interval
     case daily
     case weekly
-    case cron
+    case weekdays
 
     var id: String { rawValue }
 
@@ -15,7 +15,7 @@ enum ScheduleType: String, Codable, CaseIterable, Identifiable {
         case .interval: L10n.tr("schedule.interval")
         case .daily: L10n.tr("schedule.daily")
         case .weekly: L10n.tr("schedule.weekly")
-        case .cron: L10n.tr("schedule.cron")
+        case .weekdays: L10n.tr("schedule.weekdays")
         }
     }
 }

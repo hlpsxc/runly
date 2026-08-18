@@ -42,9 +42,9 @@ All commands:
 | `get <id\|name> --json` | Task details |
 | `create ... --json` | Create a task |
 | `run <id\|name> --json` | Run now (blocks until finished) |
-| `stop <id\|name> --json` | Stop running task (GUI + launchd + DB) |
+| `stop <id\|name> --json` | Stop running task (GUI + DB) |
 | `enable` / `disable` | Toggle schedule |
-| `delete <id\|name>` | Remove task + launchd plist |
+| `delete <id\|name>` | Remove task |
 | `status --json` | Counts + running/failed summary |
 | `help` | Usage |
 
@@ -82,7 +82,7 @@ Notes:
 
 - `--arg` is repeatable (one argv line each). Or `--arguments $'line1\nline2'`.
 - `--type` = `command` | `script` | `agent`
-- `--schedule-type` = `once` | `interval` | `daily` | `weekly` | `cron`
+- `--schedule-type` = `once` | `interval` | `daily` | `weekly` | `weekdays`
 - Name lookup is case-insensitive; prefer UUID if names collide.
 
 ## Run / Stop
@@ -92,8 +92,8 @@ Notes:
 "$RUNLY" --cli stop "Daily Hot" --json
 ```
 
-- `run` executes in the CLI process (like Run Now) and prints final status.
-- `stop` notifies a running Runly GUI (if any), kills `--run-task` processes, and marks open runs `cancelled`.
+- `run` executes in the CLI process (like Run Now) and prints final status. If Settings → Run tasks in iTerm is on, this opens an iTerm window.
+- `stop` notifies a running Runly GUI (if any) and marks open runs `cancelled`.
 
 ## Typical agent workflow
 
@@ -107,7 +107,6 @@ Notes:
 
 - Store: `~/Library/Application Support/Runly.store`
 - Logs: `~/Library/Application Support/Runly/Logs/<task-uuid>/`
-- LaunchAgents: `~/Library/LaunchAgents/com.runly.task.<uuid>.plist`
 
 ## Do not
 

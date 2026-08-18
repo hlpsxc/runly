@@ -3,6 +3,12 @@ import Foundation
 enum EnvironmentResolver {
     static func buildEnvironment(for task: RunlyTask) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
+
+        // GUI scheduled runs never source ~/.zshrc — merge login-shell exports (API keys, etc.).
+        for (key, value) in LoginShellEnvironment.current() {
+            env[key] = value
+        }
+
         env["PATH"] = ShellPathResolver.augmentedPATH(from: env["PATH"])
 
         for (key, value) in parseKeyValueLines(task.environment) {

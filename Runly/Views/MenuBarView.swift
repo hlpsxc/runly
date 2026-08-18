@@ -407,15 +407,14 @@ struct MenuBarView: View {
     }
 
     private func upcomingLabel(_ date: Date) -> String {
-        let calendar = Calendar.current
-        let time = date.formatted(date: .omitted, time: .shortened)
-        if calendar.isDateInToday(date) {
+        let time = RelativeTimeFormatter.beijingTime(date)
+        if RelativeTimeFormatter.isBeijingToday(date) {
             return String(format: t.tr("mb.today"), time)
         }
-        if calendar.isDateInTomorrow(date) {
+        if RelativeTimeFormatter.isBeijingTomorrow(date) {
             return String(format: t.tr("mb.tomorrow"), time)
         }
-        return date.formatted(date: .abbreviated, time: .shortened)
+        return RelativeTimeFormatter.absolute(date)
     }
 
     private func statusColor(_ status: RunStatus) -> Color {

@@ -10,7 +10,7 @@ struct RunDetailView: View {
                 labeled(L10n.tr("status"), run.status.displayName)
                 labeled(L10n.tr("exit"), run.exitCode.map(String.init) ?? L10n.tr("em_dash"))
                 labeled(L10n.tr("duration"), run.duration.map { String(format: "%.1fs", $0) } ?? L10n.tr("em_dash"))
-                labeled(L10n.tr("started"), run.startAt.formatted(date: .abbreviated, time: .standard))
+                labeled(L10n.tr("started"), RelativeTimeFormatter.absolute(run.startAt))
             }
 
             LogViewer(text: logText, isLive: false)

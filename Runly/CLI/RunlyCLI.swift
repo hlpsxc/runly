@@ -33,12 +33,11 @@ enum RunlyCLI {
                 let logs = LogService()
                 let tasks = TaskService(modelContext: context)
                 let runs = RunService(modelContext: context, logService: logs, session: session)
-                let launchd = LaunchdService()
+                LaunchdService().uninstallAllAgents()
                 let hub = CLIHub(
                     context: context,
                     taskService: tasks,
                     runService: runs,
-                    launchd: launchd,
                     json: parsed.json
                 )
                 try await hub.execute(parsed.command)
@@ -147,7 +146,7 @@ private enum Parser {
       --arg <value>                        (repeatable; one argv line each)
       --arguments <text>                   (newline-separated argv; \\n allowed)
       --cwd <path>
-      --schedule-type once|interval|daily|weekly|cron
+      --schedule-type once|interval|daily|weekly|weekdays
       --schedule <expression>              (default: Every day)
       --enabled / --disabled               (default: enabled)
       --timeout <seconds>                  (default: 300)
@@ -251,6 +250,9 @@ private enum Parser {
             case "--cwd", "--working-directory": cwd = try needValue()
             case "--schedule-type":
                 let raw = try needValue()
+                if raw == "cron" {
+                    throw CLIError.invalid("cron is removed; use --schedule-type weekdays --schedule 08:00")
+                }
                 guard let value = ScheduleType(rawValue: raw) else {
                     throw CLIError.invalid("unknown schedule-type: \(raw)")
                 }
@@ -314,24 +316,22 @@ private final class CLIHub {
     let context: ModelContext
     let taskService: TaskService
     let runService: RunService
-    let launchd: LaunchdService
     let json: Bool
 
     init(
         context: ModelContext,
         taskService: TaskService,
         runService: RunService,
-        launchd: LaunchdService,
         json: Bool
     ) {
         self.context = context
         self.taskService = taskService
         self.runService = runService
-        self.launchd = launchd
         self.json = json
     }
 
     func execute(_ command: CLICommand) async throws {
+        _ = try taskService.reconcileNextRunTimes()
         switch command {
         case .help:
             break
@@ -431,7 +431,6 @@ private final class CLIHub {
             object: nil,
             userInfo: ["taskID": task.id.uuidString]
         )
-        _ = launchd.stopRunningJob(taskID: task.id)
         _ = HeadlessProcessProbe.terminate(taskID: task.id)
 
         // Mark open runs cancelled when no process remains.

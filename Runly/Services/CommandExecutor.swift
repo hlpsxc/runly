@@ -6,6 +6,7 @@ struct CommandSpec: Sendable {
     var environment: [String: String]
     var currentDirectoryURL: URL?
     var timeout: TimeInterval
+    var runInITerm: Bool = false
 }
 
 struct CommandResult: Sendable {
@@ -35,20 +36,26 @@ enum CommandExecutorError: LocalizedError {
 final class CommandExecutor: @unchecked Sendable {
     private let lock = NSLock()
     private weak var activeProcess: Process?
+    private var iTermSession: ITermRunner.Session?
     private let cancelFlag = CancelFlag()
 
-    /// True while a child `Process` is still alive.
+    /// True while a child `Process` is alive, or an iTerm run is still owned by this executor.
     var hasLiveProcess: Bool {
         lock.lock()
         defer { lock.unlock() }
-        return activeProcess?.isRunning == true
+        if activeProcess?.isRunning == true { return true }
+        // Keep the run alive until `runInITerm` returns — the wrapper PID can
+        // vanish (iTerm SIGHUP) before the exit file is written.
+        return iTermSession != nil
     }
 
     func stop() {
         cancelFlag.markCancelled()
         lock.lock()
         let process = activeProcess
+        let iTerm = iTermSession
         lock.unlock()
+        iTerm?.markCancelled()
         guard let process, process.isRunning else { return }
 
         // SIGTERM first; escalate to SIGKILL if the process ignores it.
@@ -65,6 +72,10 @@ final class CommandExecutor: @unchecked Sendable {
         onStderr: (@Sendable (String) -> Void)? = nil
     ) async throws -> CommandResult {
         cancelFlag.reset()
+
+        if spec.runInITerm, ITermRunSettings.isAvailable {
+            return try await runInITerm(spec, onStdout: onStdout, onStderr: onStderr)
+        }
 
         return try await withCheckedThrowingContinuation { continuation in
             let process = Process()
@@ -191,6 +202,35 @@ final class CommandExecutor: @unchecked Sendable {
                 }
             }
         }
+    }
+
+    private func runInITerm(
+        _ spec: CommandSpec,
+        onStdout: (@Sendable (String) -> Void)?,
+        onStderr: (@Sendable (String) -> Void)?
+    ) async throws -> CommandResult {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("RunlyITerm", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        if dir.path.contains(where: { $0.isWhitespace || $0 == "\"" || $0 == "'" }) {
+            throw CommandExecutorError.failedToStart("iTerm run directory path is not safe: \(dir.path)")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let session = ITermRunner.Session(directory: dir)
+        lock.lock()
+        iTermSession = session
+        lock.unlock()
+        defer {
+            lock.lock()
+            iTermSession = nil
+            lock.unlock()
+        }
+        return try await ITermRunner.run(
+            spec,
+            session: session,
+            onStdout: onStdout,
+            onStderr: onStderr
+        )
     }
 }
 

@@ -18,6 +18,9 @@ struct TaskEditorView: View {
     @State private var pasteParseNote: String?
     @State private var pasteParseSeverity: DraftValidator.Severity = .info
     @State private var notificationSource: TaskDraft.NotificationSource = .system
+    @State private var permissionNeeds: [PermissionPreflight.Need] = []
+    @State private var showPermissionSheet = false
+    @State private var isRequestingPermissions = false
     @State private var fieldMessages: [DraftValidator.Message] = []
 
 
@@ -174,12 +177,14 @@ struct TaskEditorView: View {
                             selection: onceDateBinding,
                             displayedComponents: [.date, .hourAndMinute]
                         )
-                    case .daily:
+                        .environment(\.timeZone, ScheduleCalculator.scheduleTimeZone)
+                    case .daily, .weekdays:
                         DatePicker(
                             t.tr("schedule.time"),
                             selection: dailyTimeBinding,
                             displayedComponents: [.hourAndMinute]
                         )
+                        .environment(\.timeZone, ScheduleCalculator.scheduleTimeZone)
                     case .weekly:
                         Picker(t.tr("schedule.weekday"), selection: weeklyWeekdayBinding) {
                             ForEach(0..<7, id: \.self) { day in
@@ -191,15 +196,21 @@ struct TaskEditorView: View {
                             selection: weeklyTimeBinding,
                             displayedComponents: [.hourAndMinute]
                         )
-                    case .interval, .cron:
+                        .environment(\.timeZone, ScheduleCalculator.scheduleTimeZone)
+                    case .interval:
                         TextField(t.tr("expression"), text: $draft.scheduleExpression)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.scheduleExpression) { _, _ in refreshValidation() }
                     }
 
+                    Text(t.tr("schedule.timezone_hint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     if draft.scheduleType == .once
                         || draft.scheduleType == .daily
-                        || draft.scheduleType == .weekly {
+                        || draft.scheduleType == .weekly
+                        || draft.scheduleType == .weekdays {
                         Text(draft.scheduleExpression.isEmpty ? t.tr("em_dash") : draft.scheduleExpression)
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
@@ -384,6 +395,15 @@ struct TaskEditorView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            .sheet(isPresented: $showPermissionSheet) {
+                PermissionPreflightSheet(
+                    needs: permissionNeeds,
+                    isRequesting: $isRequestingPermissions,
+                    onSave: { commitSave() },
+                    onDismiss: { showPermissionSheet = false }
+                )
+                .environment(localization)
+            }
             .onAppear(perform: loadIfEditing)
         }
     }
@@ -438,7 +458,10 @@ struct TaskEditorView: View {
         Binding(
             get: { ScheduleCalculator.dateForDailyTime(draft.scheduleExpression) },
             set: { newValue in
-                let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                let comps = ScheduleCalculator.scheduleCalendar.dateComponents(
+                    [.hour, .minute],
+                    from: newValue
+                )
                 draft.scheduleExpression = ScheduleCalculator.formatDailyTime(
                     hour: comps.hour ?? 9,
                     minute: comps.minute ?? 0
@@ -477,7 +500,10 @@ struct TaskEditorView: View {
             },
             set: { newValue in
                 let weekday = ScheduleCalculator.parseWeekly(draft.scheduleExpression)?.weekday ?? 1
-                let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                let comps = ScheduleCalculator.scheduleCalendar.dateComponents(
+                    [.hour, .minute],
+                    from: newValue
+                )
                 draft.scheduleExpression = ScheduleCalculator.formatWeekly(
                     weekday: weekday,
                     hour: comps.hour ?? 9,
@@ -499,14 +525,14 @@ struct TaskEditorView: View {
                     ScheduleCalculator.defaultOnceDate()
                 )
             }
-        case .daily:
-            if let time = ScheduleCalculator.parseDailyTime(expr.isEmpty ? "09:00" : expr) {
+        case .daily, .weekdays:
+            if let time = ScheduleCalculator.parseDailyTime(expr.isEmpty ? "08:00" : expr) {
                 draft.scheduleExpression = ScheduleCalculator.formatDailyTime(
                     hour: time.hour,
                     minute: time.minute
                 )
             } else {
-                draft.scheduleExpression = "09:00"
+                draft.scheduleExpression = draft.scheduleType == .weekdays ? "08:00" : "09:00"
             }
         case .weekly:
             if let weekly = ScheduleCalculator.parseWeekly(expr.isEmpty ? "Mon 09:00" : expr) {
@@ -522,11 +548,6 @@ struct TaskEditorView: View {
             if expr.isEmpty || ScheduleCalculator.intervalSeconds(expression: expr) == nil {
                 draft.scheduleExpression = "Every day"
             }
-        case .cron:
-            let parts = expr.split(whereSeparator: \.isWhitespace)
-            if expr.isEmpty || parts.count < 5 {
-                draft.scheduleExpression = "0 9 * * *"
-            }
         }
     }
 
@@ -536,7 +557,7 @@ struct TaskEditorView: View {
         case .interval: localization.tr("schedule.hint.interval")
         case .daily: localization.tr("schedule.hint.daily")
         case .weekly: localization.tr("schedule.hint.weekly")
-        case .cron: localization.tr("schedule.hint.cron")
+        case .weekdays: localization.tr("schedule.hint.weekdays")
         }
     }
 
@@ -714,12 +735,24 @@ struct TaskEditorView: View {
             errorMessage = blockers.map(\.text).joined(separator: "\n")
             return
         }
+
+        let needs = PermissionPreflight.detect(draft: draft)
+        if !needs.isEmpty {
+            permissionNeeds = needs
+            showPermissionSheet = true
+            return
+        }
+        commitSave()
+    }
+
+    private func commitSave() {
         do {
             if let editingTask {
                 try appState.updateTask(editingTask, with: draft)
             } else {
                 _ = try appState.createTask(draft)
             }
+            showPermissionSheet = false
             onSave()
             dismiss()
         } catch {
@@ -746,7 +779,8 @@ struct TaskEditorView: View {
             arguments: preview.arguments,
             environment: preview.environment,
             currentDirectoryURL: preview.workingDirectory,
-            timeout: timeout
+            timeout: timeout,
+            runInITerm: ITermRunSettings.isEnabled
         )
 
         do {
@@ -763,6 +797,86 @@ struct TaskEditorView: View {
             if result.timedOut { testOutput += " (timeout)" }
         } catch {
             testOutput += "\nError: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - Permission preflight sheet
+
+private struct PermissionPreflightSheet: View {
+    @Environment(LocalizationStore.self) private var localization
+
+    let needs: [PermissionPreflight.Need]
+    @Binding var isRequesting: Bool
+    var onSave: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        let t = localization
+        NavigationStack {
+            Form {
+                Section {
+                    Text(t.tr("perm.intro"))
+                        .font(.callout)
+                    Text(t.tr("perm.limit"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section {
+                    ForEach(needs) { need in
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(t.tr("perm.need.\(need.rawValue)"))
+                                Text(t.tr("perm.need.\(need.rawValue).hint"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            if need == .launchAtLogin {
+                                Toggle("", isOn: Binding(
+                                    get: { LoginItemService.isEnabled },
+                                    set: { newValue in
+                                        try? LoginItemService.setEnabled(newValue)
+                                    }
+                                ))
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                            } else {
+                                Button(t.tr("perm.open_one")) {
+                                    PermissionPreflight.openSettings(for: need)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section {
+                    Button(t.tr("perm.request_runly")) {
+                        Task {
+                            isRequesting = true
+                            await PermissionPreflight.requestWhatWeCan(needs: needs)
+                            isRequesting = false
+                        }
+                    }
+                    .disabled(isRequesting)
+                    Button(t.tr("perm.open_all")) {
+                        PermissionPreflight.openPrivacyAndSecurity()
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle(t.tr("perm.title"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(t.tr("perm.skip")) { onDismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(t.tr("perm.continue_save")) { onSave() }
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+            .frame(minWidth: 460, minHeight: 420)
         }
     }
 }

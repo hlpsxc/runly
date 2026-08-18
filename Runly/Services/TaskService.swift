@@ -4,7 +4,6 @@ import SwiftData
 @MainActor
 final class TaskService {
     private let modelContext: ModelContext
-    private let launchd = LaunchdService()
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -26,7 +25,6 @@ final class TaskService {
         )
         modelContext.insert(task)
         try modelContext.save()
-        _ = launchd.sync(task: task)
         return task
     }
 
@@ -39,12 +37,10 @@ final class TaskService {
             enabled: task.enabled
         )
         try modelContext.save()
-        _ = launchd.reload(task: task)
     }
 
     func delete(_ task: RunlyTask) throws {
         let id = task.id
-        launchd.remove(taskID: id)
         LogService().deleteLogs(for: id)
         modelContext.delete(task)
         try modelContext.save()
@@ -59,17 +55,11 @@ final class TaskService {
             enabled: task.enabled
         )
         try modelContext.save()
-        // Caller should sync launchd asynchronously — never block the UI turn.
-    }
-
-    func syncLaunchd(_ task: RunlyTask) {
-        _ = launchd.sync(task: task)
     }
 
     func delete(ids: Set<UUID>) throws {
         let all = try fetchAll()
         for task in all where ids.contains(task.id) {
-            launchd.remove(taskID: task.id)
             LogService().deleteLogs(for: task.id)
             modelContext.delete(task)
         }
@@ -85,7 +75,60 @@ final class TaskService {
         try modelContext.save()
     }
 
-    var launchdService: LaunchdService { launchd }
+    /// Roll past / missing `nextRunAt` values forward (e.g. daily time already passed today).
+    @discardableResult
+    func reconcileNextRunTimes(now: Date = .now) throws -> Int {
+        let tasks = try fetchAll()
+        var fixed = 0
+        for task in tasks {
+            if migrateLegacyCronIfNeeded(task) {
+                fixed += 1
+            }
+
+            // Keep overdue slots for the due watcher. Rolling them forward
+            // here would skip a fire that the process is about to pick up.
+            if task.enabled,
+               let existing = task.nextRunAt,
+               existing <= now {
+                continue
+            }
+
+            let computed = ScheduleCalculator.nextRunDate(
+                type: task.scheduleType,
+                expression: task.scheduleExpression,
+                after: now,
+                enabled: task.enabled
+            )
+            if sameInstant(task.nextRunAt, computed) { continue }
+            task.nextRunAt = computed
+            fixed += 1
+        }
+        if fixed > 0 {
+            try modelContext.save()
+        }
+        return fixed
+    }
+
+    @discardableResult
+    private func migrateLegacyCronIfNeeded(_ task: RunlyTask) -> Bool {
+        guard task.scheduleTypeRaw == "cron" else { return false }
+        let migrated = ScheduleCalculator.migrateCronExpression(task.scheduleExpression)
+        task.scheduleTypeRaw = migrated.type.rawValue
+        task.scheduleExpression = migrated.expression
+        task.updatedAt = .now
+        return true
+    }
+
+    private func sameInstant(_ a: Date?, _ b: Date?) -> Bool {
+        switch (a, b) {
+        case (nil, nil):
+            return true
+        case let (x?, y?):
+            return abs(x.timeIntervalSince(y)) < 1
+        default:
+            return false
+        }
+    }
 }
 
 /// Editable form state shared by Create / Edit flows.
@@ -144,15 +187,25 @@ struct TaskDraft: Equatable {
     }
 
     static func from(_ task: RunlyTask) -> TaskDraft {
-        TaskDraft(
+        let scheduleType: ScheduleType
+        let scheduleExpression: String
+        if task.scheduleTypeRaw == "cron" {
+            let migrated = ScheduleCalculator.migrateCronExpression(task.scheduleExpression)
+            scheduleType = migrated.type
+            scheduleExpression = migrated.expression
+        } else {
+            scheduleType = task.scheduleType
+            scheduleExpression = task.scheduleExpression
+        }
+        return TaskDraft(
             name: task.name,
             enabled: task.enabled,
             type: task.type,
             command: task.command,
             arguments: task.arguments,
             workingDirectory: task.workingDirectory,
-            scheduleType: task.scheduleType,
-            scheduleExpression: task.scheduleExpression,
+            scheduleType: scheduleType,
+            scheduleExpression: scheduleExpression,
             environment: task.environment,
             proxyEnabled: task.proxyEnabled,
             httpProxy: task.httpProxy,

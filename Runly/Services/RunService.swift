@@ -67,16 +67,21 @@ final class RunService {
         let stuckRuns = allRuns.filter { $0.status == .running }
 
         for run in stuckRuns {
-            if LaunchdService().isJobRunning(taskID: run.taskID) {
+            let age = Date().timeIntervalSince(run.startAt)
+            // Slow CLI startups (cursor-agent) need a wide grace window.
+            if age < 60 {
                 continue
             }
 
-            let isCurrentSessionRun = session.isRunning && session.runID == run.id
-            if isCurrentSessionRun {
-                if executor.hasLiveProcess { continue }
-                let age = session.startedAt.map { Date().timeIntervalSince($0) } ?? 0
-                // Grace so CommandExecutor watchdog / terminationHandler can settle first.
-                if age < 15 { continue }
+            if HeadlessProcessProbe.isRunning(taskID: run.taskID) {
+                continue
+            }
+
+            // In-process execute() owns this row until it writes a final status.
+            // iTerm runs often have no Foundation.Process child, so "PID gone"
+            // must not flip a still-running GUI session to failed.
+            if session.isRunning, session.runID == run.id {
+                continue
             }
 
             finalizeOrphanedRun(run, status: .failed)
@@ -88,6 +93,10 @@ final class RunService {
             if isActivelyExecuting(taskID: task.id) { continue }
             let stillOpen = allRuns.contains { $0.taskID == task.id && $0.status == .running }
             if stillOpen { continue }
+            // Same grace: don't clear task-level running while a young run may still be starting.
+            if let last = task.lastRunAt, Date().timeIntervalSince(last) < 60 {
+                continue
+            }
             task.lastRunStatus = .failed
             task.lastRunAt = task.lastRunAt ?? .now
             fixed += 1
@@ -102,10 +111,13 @@ final class RunService {
     }
 
     private func isActivelyExecuting(taskID: UUID) -> Bool {
-        if session.isRunning, session.taskID == taskID, executor.hasLiveProcess {
+        if session.isRunning, session.taskID == taskID {
             return true
         }
-        return LaunchdService().isJobRunning(taskID: taskID)
+        if executor.hasLiveProcess, session.taskID == taskID {
+            return true
+        }
+        return HeadlessProcessProbe.isRunning(taskID: taskID)
     }
 
     private func finalizeOrphanedRun(_ run: TaskRun, status: RunStatus) {
@@ -193,7 +205,7 @@ final class RunService {
         }
     }
 
-    /// Headless entry used by launchd (`--run-task`).
+    /// Headless entry used by leftover `--run-task` invocations.
     func runHeadless(taskID: UUID) async throws {
         let id = taskID
         let descriptor = FetchDescriptor<RunlyTask>(predicate: #Predicate { $0.id == id })
@@ -275,6 +287,7 @@ final class RunService {
         ────────────────────────────────────
         $ \(resolved.preview)
         cwd: \(resolved.workingDirectory?.path ?? "(default)")
+        runtime: \(ITermRunSettings.isEnabled ? "iTerm" : "process")
         attempt: \(attempt + 1)/\(max(1, task.retryCount + 1))
         started: \(run.startAt.formatted(date: .abbreviated, time: .standard))
 
@@ -287,12 +300,14 @@ final class RunService {
         onStateChange?()
 
         let timeout = TimeInterval(max(0, task.timeout))
+        let useITerm = ITermRunSettings.isEnabled
         let spec = CommandSpec(
             executableURL: resolved.executableURL,
             arguments: resolved.arguments,
             environment: resolved.environment,
             currentDirectoryURL: resolved.workingDirectory,
-            timeout: timeout
+            timeout: timeout,
+            runInITerm: useITerm
         )
 
         let result: CommandResult

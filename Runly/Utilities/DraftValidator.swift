@@ -125,6 +125,14 @@ enum DraftValidator {
                         text: L10n.tr("validate.schedule_weekly_invalid")
                     ))
                 }
+            case .weekdays:
+                if ScheduleCalculator.parseDailyTime(scheduleExpr) == nil {
+                    result.append(Message(
+                        id: "schedule",
+                        severity: .error,
+                        text: L10n.tr("validate.schedule_daily_invalid")
+                    ))
+                }
             case .interval:
                 if ScheduleCalculator.intervalSeconds(expression: scheduleExpr) == nil {
                     result.append(Message(
@@ -133,8 +141,6 @@ enum DraftValidator {
                         text: L10n.tr("validate.schedule_interval_invalid")
                     ))
                 }
-            case .cron:
-                break
             }
         }
 

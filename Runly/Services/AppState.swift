@@ -20,7 +20,6 @@ final class AppState {
     var pendingFocusRunID: UUID?
     var dismissedFailedRunIDs: Set<UUID> = []
     var errorMessage: String?
-    var launchdErrorMessage: String?
 
     /// When this GUI process started (shown in Settings → About).
     let lastLaunchedAt: Date
@@ -28,6 +27,8 @@ final class AppState {
     private(set) var allTasks: [RunlyTask] = []
     private(set) var notificationTemplates: [NotificationTemplate] = []
     private var orphanWatchTask: Task<Void, Never>?
+    private var dueWatchTask: Task<Void, Never>?
+    private var firedScheduleKeys: Set<String> = []
 
     init(container: ModelContainer) {
         self.container = container
@@ -55,16 +56,21 @@ final class AppState {
             _ = self.runService.reconcileOrphanedRuns()
             self.refresh()
             self.startOrphanWatch()
+            self.startDueWatch()
+            LaunchdService().uninstallAllAgents()
         }
     }
 
     func bootstrap() {
         SystemNotificationService.shared.configure(appState: self)
         SystemNotificationService.shared.requestAuthorizationIfNeeded()
+        LoginShellEnvironment.warmCacheInBackground()
         _ = runService.reconcileOrphanedRuns()
         refresh()
         startOrphanWatch()
+        startDueWatch()
         startDistributedObservers()
+        LaunchdService().uninstallAllAgents()
     }
 
     private func startDistributedObservers() {
@@ -106,8 +112,77 @@ final class AppState {
         }
     }
 
+    /// Process-owned scheduler: poll for due tasks while Runly is running.
+    private func startDueWatch() {
+        dueWatchTask?.cancel()
+        dueWatchTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self, !Task.isCancelled else { return }
+                self.runDueSchedulesIfNeeded()
+                let seconds = DueWatchSettings.intervalSeconds
+                try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+            }
+        }
+    }
+
+    func restartDueWatch() {
+        startDueWatch()
+    }
+
+    var dueWatchIntervalSeconds: Int {
+        get { DueWatchSettings.intervalSeconds }
+        set {
+            DueWatchSettings.intervalSeconds = newValue
+            startDueWatch()
+        }
+    }
+
+    private func runDueSchedulesIfNeeded() {
+        // Load tasks without rolling overdue nextRunAt forward (see TaskService.reconcile).
+        do {
+            allTasks = try taskService.fetchAll()
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        guard !session.isRunning else {
+            refresh()
+            return
+        }
+        let now = Date()
+        let due = allTasks.filter { task in
+            guard task.enabled, let next = task.nextRunAt, next <= now else { return false }
+            let key = "\(task.id.uuidString)-\(Int(next.timeIntervalSince1970))"
+            return !firedScheduleKeys.contains(key)
+        }
+        .sorted { ($0.nextRunAt ?? .distantFuture) < ($1.nextRunAt ?? .distantFuture) }
+
+        guard let task = due.first, let next = task.nextRunAt else {
+            refresh()
+            return
+        }
+        if HeadlessProcessProbe.isRunning(taskID: task.id) {
+            refresh()
+            return
+        }
+
+        let key = "\(task.id.uuidString)-\(Int(next.timeIntervalSince1970))"
+        firedScheduleKeys.insert(key)
+        // Advance before starting so the next tick does not re-fire the same slot.
+        task.nextRunAt = ScheduleCalculator.nextRunDate(
+            type: task.scheduleType,
+            expression: task.scheduleExpression,
+            after: next.addingTimeInterval(1),
+            enabled: task.enabled
+        )
+        try? container.mainContext.save()
+        runTask(task)
+        refresh()
+    }
+
     func refresh() {
         do {
+            _ = try taskService.reconcileNextRunTimes()
             allTasks = try taskService.fetchAll()
             notificationTemplates = try templateService.fetchAll()
             menuBarState = buildMenuBarState(tasks: allTasks)
@@ -142,16 +217,12 @@ final class AppState {
         refresh()
     }
 
-    /// Stop a specific task — in-process executor and/or launchd agent.
+    /// Stop a specific task — in-process executor and leftover `--run-task` processes.
     func stopTask(id: UUID) {
         if session.isRunning, session.taskID == id {
             runService.stopCurrent()
         }
-        _ = taskService.launchdService.stopRunningJob(taskID: id)
-        if let err = taskService.launchdService.lastError {
-            // Non-fatal when the in-process stop already worked.
-            launchdErrorMessage = err
-        }
+        _ = HeadlessProcessProbe.terminate(taskID: id)
         refresh()
     }
 
@@ -161,14 +232,12 @@ final class AppState {
 
     func createTask(_ draft: TaskDraft) throws -> RunlyTask {
         let task = try taskService.create(draft)
-        launchdErrorMessage = taskService.launchdService.lastError
         refresh()
         return task
     }
 
     func updateTask(_ task: RunlyTask, with draft: TaskDraft) throws {
         try taskService.update(task, with: draft)
-        launchdErrorMessage = taskService.launchdService.lastError
         refresh()
     }
 
@@ -207,22 +276,11 @@ final class AppState {
     }
 
     func setEnabled(_ task: RunlyTask, enabled: Bool) {
-        let taskID = task.id
         do {
             try taskService.setEnabled(task, enabled: enabled)
             refresh()
         } catch {
             errorMessage = error.localizedDescription
-            return
-        }
-
-        // launchctl wait must not run inside a SwiftUI binding/layout turn.
-        Task { @MainActor in
-            if let latest = allTasks.first(where: { $0.id == taskID })
-                ?? (try? taskService.fetchAll().first { $0.id == taskID }) {
-                taskService.syncLaunchd(latest)
-                refresh()
-            }
         }
     }
 
@@ -309,7 +367,7 @@ final class AppState {
 
         let upcoming = tasks
             .compactMap { task -> MenuBarUpcomingItem? in
-                guard task.enabled, let next = task.nextRunAt else { return nil }
+                guard task.enabled, let next = task.nextRunAt, next > .now else { return nil }
                 return MenuBarUpcomingItem(id: task.id, name: task.name, nextRunAt: next)
             }
             .sorted { $0.nextRunAt < $1.nextRunAt }

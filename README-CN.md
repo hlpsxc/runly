@@ -40,19 +40,22 @@ Schedule → Execute → Log → Notify
 
 ### 调度与执行
 
-- **Schedule**：Once · Interval · Daily · Weekly · Cron（best-effort）
-- **精确到分钟**：Once / Daily / Weekly 使用日期与时间选择器；表达式存为 `yyyy-MM-dd HH:mm`、`HH:mm` 或 `Mon HH:mm`
-- **launchd**：每个任务对应 `~/Library/LaunchAgents/com.runly.task.<UUID>.plist`（日历字段含 Hour + Minute）
+- **Schedule**：Once · Interval · Daily · Weekly · Weekdays（周一至周五）
+- **北京时间（UTC+8）**：Once / Daily / Weekly / Weekdays 的钟点一律按 Asia/Shanghai 解释
+- **精确到分钟**：Once / Daily / Weekly / Weekdays 使用日期与时间选择器；表达式存为 `yyyy-MM-dd HH:mm`、`HH:mm` 或 `Mon HH:mm`
+- **进程内调度**：Runly 运行期间按可配置间隔（默认 20 秒）检查到期任务。不再使用 launchd / cron
+- **在 iTerm 中执行**（设置项，已安装 iTerm2 时默认开启）：定时/手动任务在 iTerm 窗口里跑，从而沿用 iTerm 已授权的屏幕录制 / 辅助功能。通知命令仍在后台执行
 - **Run Now**：立即执行，不改动原有日程
 - **Timeout / Retry**：超时终止、失败重试
 - **Stop**：停止正在运行的任务
   - 主窗口工具栏 / 日志页 / 任务列表右键 / 菜单栏 Running 区块
   - 快捷键 `⌘.`
-  - 先 SIGTERM，仍未退出则 SIGKILL；launchd 任务额外 `launchctl kill`
+  - 先 SIGTERM，仍未退出则 SIGKILL
 
 ### 环境与代理
 
 - 自定义 `KEY=VALUE` 环境变量
+- **默认合并登录 Shell 环境**（`~/.zshrc` / profile 中的 `export`），解决菜单栏调度读不到 Terminal 里 API Key 的问题；可在 Settings 关闭
 - GUI App 自动补齐常见 PATH（Homebrew 等），**不覆盖**用户已有 PATH
 - 任务级 HTTP / HTTPS / SOCKS / NO_PROXY（只作用于当前 Process）
 
@@ -70,7 +73,7 @@ Schedule → Execute → Log → Notify
 ### 编辑器
 
 - **Paste Command Line**：粘贴完整 CLI（支持 `\` 换行与引号），自动拆成 Command + Arguments
-- 日程 UI：Once · Daily · Weekly 用日期/时间选择器；Interval · Cron 用手写表达式
+- 日程 UI：Once · Daily · Weekly · Weekdays 用日期/时间选择器；Interval 用手写表达式
 - 输入后自动隐藏占位 / 示例提示，改为解析结果或校验信息
 - 基础校验：空命令、未闭合引号、环境变量格式、路径不存在、无效日程等（错误阻止保存）
 - **Command Preview** 与 **Test Run**
@@ -84,7 +87,7 @@ Schedule → Execute → Log → Notify
 
 ### 其它
 
-- **Launch at Login**（`SMAppService`，与任务 launchd 独立）
+- **Launch at Login**（`SMAppService`）— 重启后要继续定时，需要 Runly 保持运行
 - 主窗口 Dashboard：完整 CRUD、编辑 Schedule / Agent、历史与日志
 
 ---
@@ -162,21 +165,15 @@ echo "hello from Runly"
 
 ### 6. 定时后台执行
 
-保存并 **Enabled** 后，Runly 会写入 LaunchAgent。到点由 macOS 调用：
-
-```text
-Runly --run-task <UUID>
-```
-
-无需一直打开主窗口。
+请保持 **Runly 在运行**（建议打开「登录时启动」）。启用的任务由进程内轮询发现 `nextRunAt` 已到期后执行。间隔在 **设置 → 每 N 秒检查到期任务**（默认 20 秒）。
 
 | 类型 | 表达式（精确到分钟） | 示例 |
 | --- | --- | --- |
 | Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
 | Daily | `HH:mm` | `23:05` |
 | Weekly | `Mon HH:mm`（或 `0`–`6` 表示星期） | `Fri 18:45` |
+| Weekdays | `HH:mm`（周一至周五，北京时间） | `08:00` |
 | Interval | 自然语言 / 秒数 | `Every 5 minutes` · `Every 3 hours` |
-| Cron | 5 段（best-effort） | `30 9 * * 1` |
 
 ### 7. Agent CLI（Cursor / Codex）
 
@@ -201,7 +198,7 @@ export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Run
 | `list` / `get` | 查看任务 |
 | `create` | 新建 command / script / agent |
 | `run` | 立即运行（阻塞直到结束） |
-| `stop` | 停止 GUI / launchd / 数据库中的运行态 |
+| `stop` | 停止正在运行的进程并更新数据库 |
 | `enable` / `disable` / `delete` | 启停与删除 |
 | `status` | 汇总运行中 / 失败等 |
 
@@ -212,9 +209,9 @@ export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Run
 "$RUNLY" --cli create --name Briefing --command echo --arg hi \
   --schedule-type once --schedule "2026-08-20 09:30" --json
 
-# 每周一早上
+# 每个工作日早上 08:00（北京时间）
 "$RUNLY" --cli create --name Standup --command echo --arg standup \
-  --schedule-type weekly --schedule "Mon 09:15" --json
+  --schedule-type weekdays --schedule "08:00" --json
 ```
 
 Skill 文档：
@@ -229,7 +226,7 @@ Skill 文档：
 ### 参数写法
 
 - **一行一个参数**，行内空格会保留（适合 Prompt）
-- 主执行路径使用 `Foundation.Process` + 结构化 argv，**不会**把命令拼成 shell 字符串
+- 主执行路径使用结构化 argv，**不会**把命令拼成 shell 字符串。开启 **在 iTerm 中执行** 时，进程在 iTerm 里启动，而不是作为 Runly 的 `Foundation.Process` 子进程
 - 也可用 Paste Command Line 粘贴带引号 / `\` 续行的完整 CLI
 
 ```text
@@ -296,7 +293,6 @@ Settings → General → Language：
 | --- | --- |
 | SwiftData | 应用沙盒外 Application Support（Runly 容器） |
 | 日志 | `~/Library/Application Support/Runly/Logs/` |
-| LaunchAgents | `~/Library/LaunchAgents/com.runly.task.<UUID>.plist` |
 
 ---
 
@@ -314,7 +310,7 @@ Settings → General → Language：
                    │
                 AppState
                    │
-     TaskService · RunService · launchd
+     TaskService · RunService
                    │
          NotificationTemplate（共享）
 ```
@@ -325,27 +321,26 @@ Settings → General → Language：
 
 ```text
 Runly/
-├── App/           # 入口、Settings、headless --run-task
+├── App/           # 入口、Settings
 ├── CLI/           # Agent 用 --cli（list/create/run/stop…）
 ├── Models/        # RunlyTask、TaskRun、NotificationTemplate、枚举
 ├── Services/      # AppState、Executor、Logs、Notifications、Templates…
-├── Scheduler/     # LaunchAgent 生成与 launchctl
+├── Scheduler/     # 清理旧 LaunchAgent
 ├── Views/         # MenuBar、Dashboard、Editor、LogViewer
 ├── Utilities/     # PATH、模板、日程、CLI 解析、校验、本地化
 └── Resources/     # Info.plist、Entitlements、Assets
 ```
 
 另有：`.cursor/skills/runly` · `skills/runly` — Cursor / Codex Agent Skill。
-技术栈：Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · launchd · SMAppService
+技术栈：Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications · SMAppService
 
 ---
 
 ## 已知限制
 
-- Cron 的列表/范围/步长语法为 best-effort，映射到 launchd 日历字段
-- 应用内同一时间只跑一个前台 RunSession（launchd 仍可另起进程）
+- 应用内同一时间只跑一个 RunSession
+- 定时任务仅在 Runly 进程运行时触发
 - 带管道/重定向的通知命令可能走 shell
-- 开发时若从 DerivedData 路径注册 LaunchAgent，重编译后路径会变；正式使用请固定安装位置或重新 Enable 任务
 
 ---
 

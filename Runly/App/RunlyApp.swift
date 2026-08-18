@@ -77,7 +77,7 @@ struct RunlyApp: App {
     }
 }
 
-/// launchd entry: `Runly --run-task <uuid>`
+/// Optional leftover entry: `Runly --run-task <uuid>`
 enum HeadlessRunner {
     static func run() {
         let app = NSApplication.shared
@@ -94,6 +94,8 @@ enum HeadlessRunner {
         Task { @MainActor in
             var code: Int32 = 0
             do {
+                // Ensure ~/.zshrc exports (API keys, etc.) are available before resolve.
+                _ = LoginShellEnvironment.current(forceRefresh: true)
                 let container = try RunlyStore.makeContainer()
                 let context = ModelContext(container)
                 let session = RunSession()
@@ -155,6 +157,44 @@ struct SettingsView: View {
                         .foregroundStyle(.red)
                 }
                 Text(t.tr("settings.launch_at_login.footer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Stepper(value: Binding(
+                    get: { appState.dueWatchIntervalSeconds },
+                    set: { appState.dueWatchIntervalSeconds = $0 }
+                ), in: DueWatchSettings.minSeconds...DueWatchSettings.maxSeconds, step: 5) {
+                    Text(String(
+                        format: t.tr("settings.due_watch_interval"),
+                        locale: t.language.locale,
+                        appState.dueWatchIntervalSeconds
+                    ))
+                }
+                Text(t.tr("settings.due_watch_interval.footer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle(t.tr("settings.merge_shell_env"), isOn: Binding(
+                    get: { LoginShellEnvironment.isEnabled },
+                    set: { enabled in
+                        LoginShellEnvironment.isEnabled = enabled
+                        if enabled {
+                            LoginShellEnvironment.warmCacheInBackground()
+                        }
+                    }
+                ))
+                Text(t.tr("settings.merge_shell_env.footer"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle(t.tr("settings.run_in_iterm"), isOn: Binding(
+                    get: { ITermRunSettings.isEnabled },
+                    set: { ITermRunSettings.isEnabled = $0 }
+                ))
+                .disabled(!ITermRunSettings.isAvailable)
+                Text(t.tr(ITermRunSettings.isAvailable
+                          ? "settings.run_in_iterm.footer"
+                          : "settings.run_in_iterm.missing"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

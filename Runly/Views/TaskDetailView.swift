@@ -21,7 +21,6 @@ struct TaskDetailView: View {
     @State private var selectedTab: DetailTab = .overview
     @State private var runs: [TaskRun] = []
     @State private var selectedRunID: UUID?
-    @State private var launchdLoaded = false
 
     private var isThisTaskRunning: Bool {
         (runSession.isRunning && runSession.taskID == task.id)
@@ -79,12 +78,6 @@ struct TaskDetailView: View {
         .toolbar {
             ToolbarItemGroup {
                 Menu {
-                    Button(L10n.tr("reload_schedule")) {
-                        _ = LaunchdService().reload(task: task)
-                        refreshLaunchdLoaded()
-                        onRefresh()
-                    }
-                    Divider()
                     Button(L10n.tr("delete"), role: .destructive, action: onDelete)
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -93,7 +86,6 @@ struct TaskDetailView: View {
         }
         .onAppear {
             reloadRuns()
-            refreshLaunchdLoaded()
             if let initialRunID {
                 selectedRunID = initialRunID
                 selectedTab = .logs
@@ -103,24 +95,12 @@ struct TaskDetailView: View {
         .onChange(of: task.id) { _, _ in
             selectedTab = .overview
             reloadRuns()
-            refreshLaunchdLoaded()
-        }
-        .onChange(of: task.enabled) { _, _ in
-            refreshLaunchdLoaded()
         }
         .onChange(of: runSession.isRunning) { _, running in
             if !running {
                 reloadRuns()
                 onRefresh()
             }
-        }
-    }
-
-    private func refreshLaunchdLoaded() {
-        let taskID = task.id
-        // Defer off the current SwiftUI update turn.
-        Task { @MainActor in
-            launchdLoaded = LaunchdService().isLoaded(taskID: taskID)
         }
     }
 
@@ -185,11 +165,6 @@ struct TaskDetailView: View {
                 Label(task.type.displayName, systemImage: task.type.systemImage)
                 Text("·").foregroundStyle(.tertiary)
                 Text(task.scheduleSummary)
-                if launchdLoaded {
-                    Text("·").foregroundStyle(.tertiary)
-                    Label("launchd", systemImage: "gearshape.2")
-                        .foregroundStyle(.secondary)
-                }
                 if runSession.isRunning, runSession.taskID == task.id {
                     Text("·").foregroundStyle(.tertiary)
                     Label(L10n.tr("status.running"), systemImage: "circle.fill")
@@ -238,7 +213,6 @@ struct TaskDetailView: View {
             detailSection(L10n.tr("schedule")) {
                 labeled(L10n.tr("type"), task.scheduleType.displayName)
                 labeled(L10n.tr("expression"), task.scheduleExpression.isEmpty ? "—" : task.scheduleExpression)
-                labeled(L10n.tr("launchd_job"), launchdLoaded ? L10n.tr("launchd.loaded") : L10n.tr("launchd.not_loaded"))
                 labeled(L10n.tr("retry"), "\(task.retryCount)")
             }
 
@@ -299,7 +273,7 @@ struct TaskDetailView: View {
                             Image(systemName: run.status.systemImage)
                                 .foregroundStyle(statusColor(run.status))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(run.startAt.formatted(date: .abbreviated, time: .standard))
+                                Text(RelativeTimeFormatter.absolute(run.startAt))
                                     .foregroundStyle(.primary)
                                 Text(run.status.displayName)
                                     .font(.caption)
@@ -358,7 +332,7 @@ struct TaskDetailView: View {
                 }
             } else if let run = selectedRun ?? runs.first {
                 HStack {
-                    Text(run.startAt.formatted(date: .abbreviated, time: .standard))
+                    Text(RelativeTimeFormatter.absolute(run.startAt))
                         .font(.headline)
                     Spacer()
                     Text(run.status.displayName)

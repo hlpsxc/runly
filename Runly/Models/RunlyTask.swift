@@ -15,7 +15,7 @@ final class RunlyTask {
     var workingDirectory: String
 
     var scheduleTypeRaw: String
-    /// Human / machine schedule expression, e.g. `every 3 days`, `23:00`, cron string.
+    /// Human / machine schedule expression, e.g. `Every 3 days`, `23:00`, `Mon 09:00`.
     var scheduleExpression: String
 
     /// KEY=VALUE lines, one per line.
@@ -53,7 +53,15 @@ final class RunlyTask {
     }
 
     var scheduleType: ScheduleType {
-        get { ScheduleType(rawValue: scheduleTypeRaw) ?? .once }
+        get {
+            if let type = ScheduleType(rawValue: scheduleTypeRaw) {
+                return type
+            }
+            if scheduleTypeRaw == "cron" {
+                return ScheduleCalculator.migrateCronExpression(scheduleExpression).type
+            }
+            return .once
+        }
         set { scheduleTypeRaw = newValue.rawValue }
     }
 
@@ -76,18 +84,11 @@ final class RunlyTask {
     }
 
     var scheduleSummary: String {
-        switch scheduleType {
-        case .once:
-            return scheduleExpression.isEmpty ? "Once" : "Once · \(scheduleExpression)"
-        case .interval:
-            return scheduleExpression.isEmpty ? "Interval" : scheduleExpression
-        case .daily:
-            return scheduleExpression.isEmpty ? "Daily" : "Daily · \(scheduleExpression)"
-        case .weekly:
-            return scheduleExpression.isEmpty ? "Weekly" : "Weekly · \(scheduleExpression)"
-        case .cron:
-            return scheduleExpression.isEmpty ? "Cron" : "Cron · \(scheduleExpression)"
-        }
+        let typeName = scheduleType.displayName
+        let expr = scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines)
+        if expr.isEmpty { return typeName }
+        if scheduleType == .interval { return expr }
+        return "\(typeName) · \(expr)"
     }
 
     var commandPreview: String {

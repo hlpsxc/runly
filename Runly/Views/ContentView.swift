@@ -57,25 +57,19 @@ struct ContentView: View {
         .alert(
             localization.tr("something_wrong"),
             isPresented: Binding(
-                get: {
-                    appState.errorMessage != nil
-                        || viewModel.errorMessage != nil
-                        || appState.launchdErrorMessage != nil
-                },
-                set: { if !$0 {
+                    get: { appState.errorMessage != nil || viewModel.errorMessage != nil },
+                    set: { if !$0 {
+                        appState.errorMessage = nil
+                        viewModel.errorMessage = nil
+                    } }
+                )
+            ) {
+                Button(localization.tr("ok"), role: .cancel) {
                     appState.errorMessage = nil
                     viewModel.errorMessage = nil
-                    appState.launchdErrorMessage = nil
-                } }
-            )
-        ) {
-            Button(localization.tr("ok"), role: .cancel) {
-                appState.errorMessage = nil
-                viewModel.errorMessage = nil
-                appState.launchdErrorMessage = nil
-            }
-        } message: {
-            Text(appState.errorMessage ?? viewModel.errorMessage ?? appState.launchdErrorMessage ?? "")
+                }
+            } message: {
+                Text(appState.errorMessage ?? viewModel.errorMessage ?? "")
         }
     }
 

@@ -68,3 +68,4 @@ Agent task:
 - Prefer UUID from `create`/`list` when names may collide.
 - Never edit `Runly.store` directly.
 - Logs live under `~/Library/Application Support/Runly/Logs/`.
+- If Settings → Run tasks in iTerm is on, `run` opens an iTerm window (inherits iTerm TCC).

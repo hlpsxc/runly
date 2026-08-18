@@ -28,5 +28,7 @@
 	<string>NSApplication</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Runly opens an iTerm window to run tasks so they can use iTerm’s already-granted Screen Recording and Accessibility permissions.</string>
 </dict>
 </plist>
