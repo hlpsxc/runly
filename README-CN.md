@@ -26,7 +26,7 @@ Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面�
 4. 点击菜单栏闪电图标，新建 Command 任务（例如 `echo hello`），点击 **Test Run**
 5. 参考 [可运行的本地任务模板](docs/agent-recipes.md)
 
-**调度限制：** 必须保持 Runly 进程运行；目前单次/每天/每周/工作日的时间固定按**北京时间 UTC+8**解释。详见后文「已知限制」。
+**调度限制：** 必须保持 Runly 进程运行；目前单次/每天/每周/工作日的时间固定按**任务指定的时区**（已有任务继续按北京时间运行）解释。详见后文「已知限制」。
 
 ---
 
@@ -58,7 +58,7 @@ Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面�
 ### 调度与执行
 
 - **Schedule**：Once · Interval · Daily · Weekly · Weekdays（周一至周五）
-- **北京时间（UTC+8）**：Once / Daily / Weekly / Weekdays 的钟点一律按 Asia/Shanghai 解释
+- **任务级时区**：新任务默认 Mac 当前时区，老任务默认保留 Asia/Shanghai（北京）时区；可在任务编辑器中修改
 - **精确到分钟**：Once / Daily / Weekly / Weekdays 使用日期与时间选择器；表达式存为 `yyyy-MM-dd HH:mm`、`HH:mm` 或 `Mon HH:mm`
 - **进程内调度**：Runly 运行期间按可配置间隔（默认 20 秒）检查到期任务。不再使用 launchd / cron
 - **在 iTerm 中执行**（设置项，已安装 iTerm2 时默认开启）：定时/手动任务在 iTerm 窗口里跑，从而沿用 iTerm 已授权的屏幕录制 / 辅助功能。通知命令仍在后台执行
@@ -189,7 +189,7 @@ echo "hello from Runly"
 | Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
 | Daily | `HH:mm` | `23:05` |
 | Weekly | `Mon HH:mm`（或 `0`–`6` 表示星期） | `Fri 18:45` |
-| Weekdays | `HH:mm`（周一至周五，北京时间） | `08:00` |
+| Weekdays | `HH:mm`（周一至周五，按任务时区） | `08:00` |
 | Interval | 自然语言 / 秒数 | `Every 5 minutes` · `Every 3 hours` |
 
 ### 7. Agent CLI（Cursor / Codex）
@@ -226,7 +226,7 @@ export RUNLY="$PWD/DerivedData/Build/Products/Debug/Runly.app/Contents/MacOS/Run
 "$RUNLY" --cli create --name Briefing --command echo --arg hi \
   --schedule-type once --schedule "2026-08-20 09:30" --json
 
-# 每个工作日早上 08:00（北京时间）
+# 每个工作日早上 08:00（按任务时区）
 "$RUNLY" --cli create --name Standup --command echo --arg standup \
   --schedule-type weekdays --schedule "08:00" --json
 ```
@@ -356,7 +356,7 @@ Runly/
 ## 已知限制
 
 - 应用内同一时间只跑一个 RunSession
-- 定时任务仅在 Runly 进程运行时触发
+- 定时任务仅在 Runly 进程运行时触发；旧任务未设置时区时仍按北京时间运行
 - 带管道/重定向的通知命令可能走 shell
 
 ---
