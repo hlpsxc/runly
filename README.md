@@ -1,18 +1,35 @@
 # Runly
 
-**Run anything. Automatically.**
+**Schedule AI agents and CLI tasks on your Mac.**
 
-[中文文档](README-CN.md)
+Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Codex, scripts, FFmpeg, Git, and everyday developer automation. Schedule tasks, inspect real-time logs, retry failures, and receive notifications — without a cloud account.
 
-Runly is a **native macOS menu bar scheduler** for developers and AI agents. Turn any CLI (`python`, `node`, `ffmpeg`, `git`, `claude`, `codex`, `items`, …) into a local task you can schedule, track, and notify on.
+> Runly is a scheduler for installed command-line agents, **not** an AI model provider. Commands run with your local user permissions.
 
-```text
-Schedule → Execute → Log → Notify
-```
+**[Getting started](#quick-start) · [Task recipes](docs/agent-recipes.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [中文](README-CN.md)**
 
-> 100% local · no accounts · no cloud sync · Apple native APIs · no third-party dependencies
+### See Runly in action
+
+> **Demo needed:** Add real screenshots/GIFs of the menu bar, task editor and live run log to `docs/media/`. Avoid mock screenshots. The fastest demo: schedule a read-only Git status task, run it, and show its result.
+
+| Schedule | Execute | Observe |
+| --- | --- | --- |
+| Once / Interval / Daily / Weekly / Weekdays | Script / CLI / Claude Code / Codex | Live logs / retry / notifications |
+
+### Install and try
+
+**Currently source-build only.** A macOS CI build and manual unsigned release-candidate workflow are available for testing, but these are **not signed or notarized installers**. Use the source-build instructions below; public binary downloads should only be promoted after Apple Developer ID signing and notarization are configured.
+
+1. Clone with `git clone https://github.com/hlpsxc/runly.git`.
+2. Run `open Runly.xcodeproj` with full Xcode 15+ installed.
+3. Choose **My Mac**, then press **⌘R**.
+4. Click the menu-bar bolt icon, create a Command task (e.g. `echo hello`), and select **Test Run**.
+5. See [three runnable local automation recipes](docs/agent-recipes.md).
+
+**Scheduling caveats:** the Runly app must remain running; Once/Daily/Weekly/Weekdays are currently interpreted in **Asia/Shanghai (UTC+8)**. See [known limitations](#known-limitations).
 
 ---
+
 
 ## Features
 
@@ -360,7 +377,7 @@ Optional: regenerate the project with [XcodeGen](https://github.com/yonaskolb/Xc
 
 ## License
 
-MIT (if a LICENSE file is added later, that file wins)
+[MIT License](LICENSE)
 
 ---
 
