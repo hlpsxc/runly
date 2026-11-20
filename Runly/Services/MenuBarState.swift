@@ -19,6 +19,7 @@ struct MenuBarUpcomingItem: Identifiable, Equatable {
     let id: UUID
     let name: String
     let nextRunAt: Date
+    let scheduleTimeZoneIdentifier: String?
 }
 
 struct MenuBarState: Equatable {

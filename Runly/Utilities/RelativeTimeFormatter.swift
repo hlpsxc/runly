@@ -8,40 +8,61 @@ enum RelativeTimeFormatter {
         return formatter.localizedString(for: date, relativeTo: .now)
     }
 
-    /// Absolute date/time in Beijing (schedule timezone).
-    static func absolute(_ date: Date?, placeholder: String = "—") -> String {
+    /// Absolute date/time in the task schedule timezone (legacy nil → Asia/Shanghai).
+    static func absolute(
+        _ date: Date?,
+        timeZoneIdentifier: String? = nil,
+        placeholder: String = "—"
+    ) -> String {
         guard let date else { return placeholder }
-        return beijingDateTimeFormatter.string(from: date)
+        return dateTimeFormatter(timeZoneIdentifier: timeZoneIdentifier).string(from: date)
     }
 
-    /// Clock time only in Beijing, e.g. `07:00`.
-    static func beijingTime(_ date: Date?, placeholder: String = "—") -> String {
+    /// Clock time only, e.g. `07:00`, in the task schedule timezone.
+    static func clockTime(
+        _ date: Date?,
+        timeZoneIdentifier: String? = nil,
+        placeholder: String = "—"
+    ) -> String {
         guard let date else { return placeholder }
-        return beijingTimeFormatter.string(from: date)
+        return timeFormatter(timeZoneIdentifier: timeZoneIdentifier).string(from: date)
+    }
+
+    /// Compatibility alias for call sites that still say “Beijing time”.
+    static func beijingTime(_ date: Date?, placeholder: String = "—") -> String {
+        clockTime(date, timeZoneIdentifier: ScheduleCalculator.legacyTimeZoneIdentifier, placeholder: placeholder)
+    }
+
+    static func isToday(_ date: Date, timeZoneIdentifier: String? = nil) -> Bool {
+        ScheduleCalculator.scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier).isDateInToday(date)
+    }
+
+    static func isTomorrow(_ date: Date, timeZoneIdentifier: String? = nil) -> Bool {
+        ScheduleCalculator.scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier).isDateInTomorrow(date)
     }
 
     static func isBeijingToday(_ date: Date) -> Bool {
-        ScheduleCalculator.scheduleCalendar.isDateInToday(date)
+        isToday(date, timeZoneIdentifier: ScheduleCalculator.legacyTimeZoneIdentifier)
     }
 
     static func isBeijingTomorrow(_ date: Date) -> Bool {
-        ScheduleCalculator.scheduleCalendar.isDateInTomorrow(date)
+        isTomorrow(date, timeZoneIdentifier: ScheduleCalculator.legacyTimeZoneIdentifier)
     }
 
-    private static let beijingDateTimeFormatter: DateFormatter = {
+    private static func dateTimeFormatter(timeZoneIdentifier: String?) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
-        formatter.timeZone = ScheduleCalculator.scheduleTimeZone
+        formatter.timeZone = ScheduleCalculator.timeZone(for: timeZoneIdentifier)
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter
-    }()
+    }
 
-    private static let beijingTimeFormatter: DateFormatter = {
+    private static func timeFormatter(timeZoneIdentifier: String?) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = ScheduleCalculator.scheduleTimeZone
+        formatter.timeZone = ScheduleCalculator.timeZone(for: timeZoneIdentifier)
         formatter.dateFormat = "HH:mm"
         return formatter
-    }()
+    }
 }

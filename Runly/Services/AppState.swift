@@ -369,7 +369,12 @@ final class AppState {
         let upcoming = tasks
             .compactMap { task -> MenuBarUpcomingItem? in
                 guard task.enabled, let next = task.nextRunAt, next > .now else { return nil }
-                return MenuBarUpcomingItem(id: task.id, name: task.name, nextRunAt: next)
+                return MenuBarUpcomingItem(
+                    id: task.id,
+                    name: task.name,
+                    nextRunAt: next,
+                    scheduleTimeZoneIdentifier: task.scheduleTimeZoneIdentifier
+                )
             }
             .sorted { $0.nextRunAt < $1.nextRunAt }
             .prefix(5)

@@ -116,6 +116,7 @@ private struct CreateOptions {
     var workingDirectory: String
     var scheduleType: ScheduleType
     var scheduleExpression: String
+    var scheduleTimeZoneIdentifier: String
     var enabled: Bool
     var timeout: Int
     var agentProvider: AgentProvider
@@ -148,6 +149,7 @@ private enum Parser {
       --cwd <path>
       --schedule-type once|interval|daily|weekly|weekdays
       --schedule <expression>              (default: Every day)
+      --timezone <IANA>                    (default: Mac current zone)
       --enabled / --disabled               (default: enabled)
       --timeout <seconds>                  (default: 300)
       --provider claude|codex|openclaw|custom
@@ -222,6 +224,7 @@ private enum Parser {
         var cwd = ""
         var scheduleType: ScheduleType = .interval
         var schedule = "Every day"
+        var timezone = TimeZone.current.identifier
         var enabled = true
         var timeout = 300
         var provider: AgentProvider = .custom
@@ -258,6 +261,13 @@ private enum Parser {
                 }
                 scheduleType = value
             case "--schedule": schedule = try needValue()
+            case "--timezone", "--time-zone":
+                let raw = try needValue()
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty, ScheduleCalculator.isValidTimeZoneIdentifier(trimmed) else {
+                    throw CLIError.invalid("unknown timezone: \(raw); use an IANA identifier like Asia/Tokyo")
+                }
+                timezone = trimmed
             case "--enabled": enabled = true
             case "--disabled": enabled = false
             case "--timeout":
@@ -303,6 +313,7 @@ private enum Parser {
             workingDirectory: cwd,
             scheduleType: scheduleType,
             scheduleExpression: schedule,
+            scheduleTimeZoneIdentifier: timezone,
             enabled: enabled,
             timeout: timeout,
             agentProvider: provider,
@@ -391,6 +402,7 @@ private final class CLIHub {
         draft.workingDirectory = options.workingDirectory
         draft.scheduleType = options.scheduleType
         draft.scheduleExpression = options.scheduleExpression
+        draft.scheduleTimeZoneIdentifier = options.scheduleTimeZoneIdentifier
         draft.enabled = options.enabled
         draft.timeout = options.timeout
         draft.agentProvider = options.agentProvider
@@ -530,6 +542,9 @@ private final class CLIHub {
             "workingDirectory": task.workingDirectory,
             "scheduleType": task.scheduleType.rawValue,
             "scheduleExpression": task.scheduleExpression,
+            "scheduleTimeZoneIdentifier": ScheduleCalculator.resolvedTimeZoneIdentifier(
+                task.scheduleTimeZoneIdentifier
+            ),
             "timeout": task.timeout,
             "retryCount": task.retryCount,
             "lastRunStatus": task.lastRunStatus?.rawValue ?? "",
@@ -548,9 +563,9 @@ private final class CLIHub {
         type:      \(task.type.rawValue)
         command:   \(task.command)
         args:      \(task.argumentList.joined(separator: " | "))
-        schedule:  \(task.scheduleType.rawValue) · \(task.scheduleExpression)
+        schedule:  \(task.scheduleType.rawValue) · \(task.scheduleExpression) · \(ScheduleCalculator.resolvedTimeZoneIdentifier(task.scheduleTimeZoneIdentifier))
         status:    \(task.lastRunStatus?.rawValue ?? "-")
-        next:      \(task.nextRunAt.map { $0.description } ?? "-")
+        next:      \(task.nextRunAt.map { RelativeTimeFormatter.absolute($0, timeZoneIdentifier: task.scheduleTimeZoneIdentifier) } ?? "-")
         """
     }
 

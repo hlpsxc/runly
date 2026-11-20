@@ -88,13 +88,31 @@ enum DraftValidator {
             }
         }
 
+        let zoneID = draft.scheduleTimeZoneIdentifier
+        if let zoneID,
+           !zoneID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !ScheduleCalculator.isValidTimeZoneIdentifier(zoneID) {
+            result.append(Message(
+                id: "timezone",
+                severity: .error,
+                text: String(
+                    format: L10n.tr("validate.timezone_invalid"),
+                    locale: L10n.locale,
+                    zoneID
+                )
+            ))
+        }
+
         let scheduleExpr = draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines)
         if scheduleExpr.isEmpty {
             result.append(Message(id: "schedule", severity: .warning, text: L10n.tr("validate.schedule_empty")))
         } else {
             switch draft.scheduleType {
             case .once:
-                if let date = ScheduleCalculator.parseOnceDate(scheduleExpr) {
+                if let date = ScheduleCalculator.parseOnceDate(
+                    scheduleExpr,
+                    timeZoneIdentifier: zoneID
+                ) {
                     if date <= .now {
                         result.append(Message(
                             id: "schedule",

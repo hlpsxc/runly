@@ -179,8 +179,20 @@ struct TaskDetailView: View {
     private var overviewContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                metaCard(title: L10n.tr("next_run"), value: RelativeTimeFormatter.absolute(task.nextRunAt))
-                metaCard(title: L10n.tr("last_run"), value: RelativeTimeFormatter.absolute(task.lastRunAt))
+                metaCard(
+                    title: L10n.tr("next_run"),
+                    value: RelativeTimeFormatter.absolute(
+                        task.nextRunAt,
+                        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+                    )
+                )
+                metaCard(
+                    title: L10n.tr("last_run"),
+                    value: RelativeTimeFormatter.absolute(
+                        task.lastRunAt,
+                        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+                    )
+                )
                 metaCard(
                     title: L10n.tr("status"),
                     value: task.lastRunStatus?.displayName

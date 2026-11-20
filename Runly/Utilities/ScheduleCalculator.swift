@@ -4,8 +4,43 @@ enum ScheduleCalculator {
     // Old database records do not have a zone; nil preserves their original Beijing schedule.
     static let legacyTimeZoneIdentifier = "Asia/Shanghai"
 
+    /// Common picker shortcuts; the editor also offers the full IANA catalog.
+    static let commonTimeZoneIdentifiers: [String] = [
+        "Asia/Shanghai",
+        "Asia/Tokyo",
+        "Asia/Singapore",
+        "Asia/Hong_Kong",
+        "Etc/UTC",
+        "Europe/London",
+        "Europe/Paris",
+        "America/New_York",
+        "America/Chicago",
+        "America/Los_Angeles",
+        "Australia/Sydney"
+    ]
+
+    /// True only for known IANA identifiers. Empty / nil is treated as legacy Beijing, not invalid.
+    static func isValidTimeZoneIdentifier(_ identifier: String?) -> Bool {
+        guard let identifier else { return true }
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        return TimeZone(identifier: trimmed) != nil
+    }
+
+    /// Identifier that will actually be used for scheduling (after legacy / invalid fallback).
+    static func resolvedTimeZoneIdentifier(_ identifier: String?) -> String {
+        let trimmed = identifier?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmed.isEmpty {
+            return legacyTimeZoneIdentifier
+        }
+        if TimeZone(identifier: trimmed) != nil {
+            return trimmed
+        }
+        return legacyTimeZoneIdentifier
+    }
+
     static func timeZone(for identifier: String?) -> TimeZone {
-        TimeZone(identifier: identifier ?? legacyTimeZoneIdentifier)
+        TimeZone(identifier: resolvedTimeZoneIdentifier(identifier))
             ?? TimeZone(identifier: legacyTimeZoneIdentifier)!
     }
 
@@ -14,6 +49,23 @@ enum ScheduleCalculator {
         calendar.timeZone = timeZone(for: timeZoneIdentifier)
         calendar.locale = Locale(identifier: "en_US_POSIX")
         return calendar
+    }
+
+    /// Preview the next fire without mutating persistence. Nil when disabled or already fired (once).
+    static func previewNextRun(
+        type: ScheduleType,
+        expression: String,
+        enabled: Bool,
+        timeZoneIdentifier: String?,
+        after: Date = .now
+    ) -> Date? {
+        nextRunDate(
+            type: type,
+            expression: expression,
+            after: after,
+            enabled: enabled,
+            timeZoneIdentifier: timeZoneIdentifier
+        )
     }
 
     static func nextRunDate(
@@ -101,7 +153,9 @@ enum ScheduleCalculator {
     }
 
     static func formatWeekly(weekday: Int, hour: Int, minute: Int) -> String {
-        let day = weekdayAbbreviations[weekday] ?? "Mon"
+        let day = weekdayAbbreviations.indices.contains(weekday)
+            ? weekdayAbbreviations[weekday]
+            : "Mon"
         return "\(day) \(formatDailyTime(hour: hour, minute: minute))"
     }
 
@@ -238,9 +292,14 @@ enum ScheduleCalculator {
         guard !weekdays.isEmpty else { return nil }
         let calendar = scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier)
         return weekdays.compactMap { weekday -> Date? in
-            calendar.nextDate(
+            var components = DateComponents()
+            components.hour = hour
+            components.minute = minute
+            components.second = 0
+            components.weekday = weekday + 1
+            return calendar.nextDate(
                 after: after,
-                matching: DateComponents(weekday: weekday + 1, hour: hour, minute: minute, second: 0),
+                matching: components,
                 matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward)
         }.min()
     }

@@ -28,6 +28,6 @@ Runly supports `{{date}}`, `{{time}}`, `{{task_name}}`, `{{working_directory}}`,
 
 ## Scheduling caveats
 
-As currently implemented, Runly must remain running for scheduled tasks to fire. New tasks capture your Mac's current timezone; existing tasks without a timezone field retain **Asia/Shanghai (UTC+8)**. You can change a task's timezone from its editor; this preserves the entered local clock expression and recalculates the next run. Interval schedules are elapsed seconds and do not change with timezone. DST gaps advance to the next valid local time and repeated times use the first occurrence. Always review the next run when changing a timezone.
+As currently implemented, Runly must remain running for scheduled tasks to fire. New tasks capture your Mac's current timezone (GUI and `Runly --cli create`, unless `--timezone` is set); existing tasks without a timezone field retain **Asia/Shanghai (UTC+8)**. Changing a task's timezone in the editor keeps the entered local clock expression, recalculates `nextRunAt`, and shows a next-run preview; already-fired Once tasks stay fired. Invalid IANA identifiers are rejected in the UI/CLI (runtime still falls back to Asia/Shanghai for corrupted stored values). Interval schedules are elapsed seconds and do not change with timezone. DST gaps advance to the next valid local time and repeated times use the first occurrence.
 
 Do not put tokens in prompt text or notification output. Review `SECURITY.md` before executing untrusted code.

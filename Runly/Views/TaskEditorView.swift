@@ -22,6 +22,8 @@ struct TaskEditorView: View {
     @State private var showPermissionSheet = false
     @State private var isRequestingPermissions = false
     @State private var fieldMessages: [DraftValidator.Message] = []
+    @State private var showTimeZoneBrowser = false
+    @State private var timeZoneSearch = ""
 
 
     init(route: EditorRoute, onSave: @escaping () -> Void) {
@@ -170,17 +172,27 @@ struct TaskEditorView: View {
                         refreshValidation()
                     }
 
-                    Picker("Time Zone", selection: Binding(
-                        get: { draft.scheduleTimeZoneIdentifier ?? ScheduleCalculator.legacyTimeZoneIdentifier },
-                        set: { newZone in
-                            draft.scheduleTimeZoneIdentifier = newZone
-                            refreshValidation()
+                    Picker(t.tr("schedule.timezone"), selection: scheduleTimeZoneBinding) {
+                        Section(t.tr("schedule.timezone.system")) {
+                            Text(timeZoneLabel(TimeZone.current.identifier, system: true))
+                                .tag(TimeZone.current.identifier)
                         }
-                    )) {
-                        ForEach(scheduleTimeZoneChoices, id: \.self) { identifier in
-                            Text(identifier == TimeZone.current.identifier
-                                 ? "System (\(identifier))" : identifier).tag(identifier)
+                        Section(t.tr("schedule.timezone.common")) {
+                            ForEach(commonTimeZoneChoices, id: \.self) { identifier in
+                                Text(timeZoneLabel(identifier)).tag(identifier)
+                            }
                         }
+                        if showsSelectedOutsidePresets {
+                            Section(t.tr("schedule.timezone.current_selection")) {
+                                Text(timeZoneLabel(selectedScheduleTimeZone.identifier))
+                                    .tag(selectedScheduleTimeZone.identifier)
+                            }
+                        }
+                    }
+
+                    Button(t.tr("schedule.timezone.browse")) {
+                        timeZoneSearch = ""
+                        showTimeZoneBrowser = true
                     }
 
                     switch draft.scheduleType {
@@ -216,9 +228,41 @@ struct TaskEditorView: View {
                             .onChange(of: draft.scheduleExpression) { _, _ in refreshValidation() }
                     }
 
-                    Text("Times use \(selectedScheduleTimeZone.identifier). Existing tasks stay on Beijing time unless changed.")
+                    Text(String(
+                        format: t.tr("schedule.timezone_hint"),
+                        locale: localization.language.locale,
+                        selectedScheduleTimeZone.identifier
+                    ))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if draft.scheduleType != .interval {
+                        Text(String(
+                            format: t.tr("schedule.timezone_wall_clock"),
+                            locale: localization.language.locale
+                        ))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    if let preview = scheduleNextRunPreview {
+                        Text(String(
+                            format: t.tr("schedule.next_preview"),
+                            locale: localization.language.locale,
+                            RelativeTimeFormatter.absolute(
+                                preview,
+                                timeZoneIdentifier: draft.scheduleTimeZoneIdentifier
+                            ),
+                            selectedScheduleTimeZone.identifier
+                        ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    } else if draft.enabled, draft.scheduleType == .once {
+                        Text(t.tr("schedule.next_preview_none"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     if draft.scheduleType == .once
                         || draft.scheduleType == .daily
@@ -232,7 +276,7 @@ struct TaskEditorView: View {
 
                     let scheduleFilled = !draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     feedbackLines(
-                        ids: ["schedule"],
+                        ids: ["schedule", "timezone"],
                         emptyHint: scheduleFilled ? nil : scheduleHint(for: draft.scheduleType),
                         hasInput: scheduleFilled
                     )
@@ -417,6 +461,19 @@ struct TaskEditorView: View {
                 )
                 .environment(localization)
             }
+            .sheet(isPresented: $showTimeZoneBrowser) {
+                TimeZoneBrowserSheet(
+                    selectedIdentifier: selectedScheduleTimeZone.identifier,
+                    searchText: $timeZoneSearch,
+                    onSelect: { identifier in
+                        draft.scheduleTimeZoneIdentifier = identifier
+                        showTimeZoneBrowser = false
+                        refreshValidation()
+                    },
+                    onDismiss: { showTimeZoneBrowser = false }
+                )
+                .environment(localization)
+            }
             .onAppear(perform: loadIfEditing)
         }
     }
@@ -458,12 +515,48 @@ struct TaskEditorView: View {
         ScheduleCalculator.timeZone(for: draft.scheduleTimeZoneIdentifier)
     }
 
-    private var scheduleTimeZoneChoices: [String] {
-        var seen = Set<String>()
-        return [TimeZone.current.identifier, selectedScheduleTimeZone.identifier,
-                "Asia/Shanghai", "Etc/UTC", "Asia/Tokyo", "Europe/London",
-                "America/New_York", "America/Los_Angeles"]
-            .filter { seen.insert($0).inserted }
+    private var scheduleTimeZoneBinding: Binding<String> {
+        Binding(
+            get: {
+                ScheduleCalculator.resolvedTimeZoneIdentifier(draft.scheduleTimeZoneIdentifier)
+            },
+            set: { newZone in
+                // Keep the wall-clock expression string; only the zone identity changes.
+                draft.scheduleTimeZoneIdentifier = newZone
+                refreshValidation()
+            }
+        )
+    }
+
+    private var commonTimeZoneChoices: [String] {
+        var seen = Set<String>([TimeZone.current.identifier])
+        return ScheduleCalculator.commonTimeZoneIdentifiers.filter { seen.insert($0).inserted }
+    }
+
+    private var showsSelectedOutsidePresets: Bool {
+        let selected = selectedScheduleTimeZone.identifier
+        return selected != TimeZone.current.identifier
+            && !ScheduleCalculator.commonTimeZoneIdentifiers.contains(selected)
+    }
+
+    private var scheduleNextRunPreview: Date? {
+        ScheduleCalculator.previewNextRun(
+            type: draft.scheduleType,
+            expression: draft.scheduleExpression,
+            enabled: draft.enabled,
+            timeZoneIdentifier: draft.scheduleTimeZoneIdentifier
+        )
+    }
+
+    private func timeZoneLabel(_ identifier: String, system: Bool = false) -> String {
+        if system {
+            return String(
+                format: localization.tr("schedule.timezone.system_value"),
+                locale: localization.language.locale,
+                identifier
+            )
+        }
+        return identifier
     }
 
     private var onceDateBinding: Binding<Date> {
@@ -823,6 +916,55 @@ struct TaskEditorView: View {
             if result.timedOut { testOutput += " (timeout)" }
         } catch {
             testOutput += "\nError: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - Time zone browser
+
+private struct TimeZoneBrowserSheet: View {
+    @Environment(LocalizationStore.self) private var localization
+
+    let selectedIdentifier: String
+    @Binding var searchText: String
+    var onSelect: (String) -> Void
+    var onDismiss: () -> Void
+
+    private var filteredIdentifiers: [String] {
+        let all = TimeZone.knownTimeZoneIdentifiers
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return all }
+        return all.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        let t = localization
+        NavigationStack {
+            List {
+                ForEach(filteredIdentifiers, id: \.self) { identifier in
+                    Button {
+                        onSelect(identifier)
+                    } label: {
+                        HStack {
+                            Text(identifier)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if identifier == selectedIdentifier {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                    }
+                }
+            }
+            .searchable(text: $searchText, prompt: t.tr("schedule.timezone.search"))
+            .navigationTitle(t.tr("schedule.timezone.browse_title"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(t.tr("cancel")) { onDismiss() }
+                }
+            }
+            .frame(minWidth: 420, minHeight: 480)
         }
     }
 }

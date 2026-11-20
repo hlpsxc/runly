@@ -6,7 +6,7 @@ Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面�
 
 > Runly 调度你本机已经安装的 CLI Agent，**不提供大模型本身**。所有命令均使用本地用户权限执行。
 
-**[快速开始](#快速开始) · [任务示例](docs/agent-recipes.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [English](README.md)**
+**[快速开始](#快速开始) · [未签名预览安装](docs/install-unsigned.zh-CN.md) · [任务示例](docs/agent-recipes.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [English](README.md)**
 
 ### 产品演示
 
@@ -18,7 +18,9 @@ Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面�
 
 ### 安装与首次体验
 
-**目前以源码编译为主要安装方式。** 已配置 macOS CI 构建和手动触发的未签名候选产物打包，但这些产物**尚未签名与公证**，不能作为正式安装包宣传。
+**预览二进制统一标注：未签名 / 未公证（Unsigned / Not notarized）。** 开发请优先源码编译。早期测试可通过手动触发的 GitHub **pre-release** 获取 `Runly-macOS-unsigned.zip` 与 `SHA256SUMS`，详见 [docs/install-unsigned.zh-CN.md](docs/install-unsigned.zh-CN.md)。未签名 ZIP 不能当作正式安装包；签名公证渠道后续再做。
+
+**源码编译**
 
 1. `git clone https://github.com/hlpsxc/runly.git`
 2. 安装完整 Xcode 15+，执行 `open Runly.xcodeproj`
@@ -26,7 +28,7 @@ Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面�
 4. 点击菜单栏闪电图标，新建 Command 任务（例如 `echo hello`），点击 **Test Run**
 5. 参考 [可运行的本地任务模板](docs/agent-recipes.md)
 
-**调度限制：** 必须保持 Runly 进程运行；目前单次/每天/每周/工作日的时间固定按**任务指定的时区**（已有任务继续按北京时间运行）解释。详见后文「已知限制」。
+**调度限制：** 必须保持 Runly 进程运行；单次/每天/每周/工作日按**任务指定时区**解释（旧任务在未修改前继续按北京时间）。切换时区会保留本地钟面时间并重算下次运行。详见「已知限制」。
 
 ---
 

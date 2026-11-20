@@ -6,7 +6,7 @@ Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Code
 
 > Runly is a scheduler for installed command-line agents, **not** an AI model provider. Commands run with your local user permissions.
 
-**[Getting started](#quick-start) · [Task recipes](docs/agent-recipes.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [中文](README-CN.md)**
+**[Getting started](#quick-start) · [Unsigned preview install](docs/install-unsigned.md) · [Task recipes](docs/agent-recipes.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [中文](README-CN.md)**
 
 ### See Runly in action
 
@@ -18,7 +18,9 @@ Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Code
 
 ### Install and try
 
-**Currently source-build only.** A macOS CI build and manual unsigned release-candidate workflow are available for testing, but these are **not signed or notarized installers**. Use the source-build instructions below; public binary downloads should only be promoted after Apple Developer ID signing and notarization are configured.
+**Preview binaries are labeled Unsigned / Not notarized.** Prefer source build for development. For early testers, a manually triggered GitHub **pre-release** can publish `Runly-macOS-unsigned.zip` + `SHA256SUMS` — see [docs/install-unsigned.md](docs/install-unsigned.md). Do not treat unsigned ZIPs as production installers; signed/notarized distribution comes later.
+
+**Source build**
 
 1. Clone with `git clone https://github.com/hlpsxc/runly.git`.
 2. Run `open Runly.xcodeproj` with full Xcode 15+ installed.
@@ -26,7 +28,7 @@ Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Code
 4. Click the menu-bar bolt icon, create a Command task (e.g. `echo hello`), and select **Test Run**.
 5. See [three runnable local automation recipes](docs/agent-recipes.md).
 
-**Scheduling caveats:** the Runly app must remain running; Once/Daily/Weekly/Weekdays are currently interpreted in **the timezone selected for each task** (existing tasks remain Asia/Shanghai). See [known limitations](#known-limitations).
+**Scheduling caveats:** the Runly app must remain running; Once/Daily/Weekly/Weekdays use **the timezone selected for each task** (existing tasks remain Asia/Shanghai until changed). Changing a zone keeps the entered local clock time and recalculates the next run. See [known limitations](#known-limitations).
 
 ---
 

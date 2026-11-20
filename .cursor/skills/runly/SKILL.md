@@ -83,6 +83,7 @@ Notes:
 - `--arg` is repeatable (one argv line each). Or `--arguments $'line1\nline2'`.
 - `--type` = `command` | `script` | `agent`
 - `--schedule-type` = `once` | `interval` | `daily` | `weekly` | `weekdays`
+- `--timezone <IANA>` optional (default: Mac current zone); invalid identifiers are rejected
 - Name lookup is case-insensitive; prefer UUID if names collide.
 
 ## Run / Stop

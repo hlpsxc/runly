@@ -233,7 +233,7 @@ struct MenuBarView: View {
                             Text(item.name)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.primary)
-                            Text(upcomingLabel(item.nextRunAt))
+                            Text(upcomingLabel(item))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -406,15 +406,16 @@ struct MenuBarView: View {
         return "\(hours)h \(minutes % 60)m"
     }
 
-    private func upcomingLabel(_ date: Date) -> String {
-        let time = RelativeTimeFormatter.beijingTime(date)
-        if RelativeTimeFormatter.isBeijingToday(date) {
+    private func upcomingLabel(_ item: MenuBarUpcomingItem) -> String {
+        let zone = item.scheduleTimeZoneIdentifier
+        let time = RelativeTimeFormatter.clockTime(item.nextRunAt, timeZoneIdentifier: zone)
+        if RelativeTimeFormatter.isToday(item.nextRunAt, timeZoneIdentifier: zone) {
             return String(format: t.tr("mb.today"), time)
         }
-        if RelativeTimeFormatter.isBeijingTomorrow(date) {
+        if RelativeTimeFormatter.isTomorrow(item.nextRunAt, timeZoneIdentifier: zone) {
             return String(format: t.tr("mb.tomorrow"), time)
         }
-        return RelativeTimeFormatter.absolute(date)
+        return RelativeTimeFormatter.absolute(item.nextRunAt, timeZoneIdentifier: zone)
     }
 
     private func statusColor(_ status: RunStatus) -> Color {

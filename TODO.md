@@ -1,34 +1,37 @@
 # Runly — Roadmap & Follow-up TODO
 
-> Last updated: 2026-11-20. This checklist tracks remaining work after the open-source readiness and per-task time-zone changes in [PR #1](https://github.com/hlpsxc/runly/pull/1).
+> Last updated: 2026-11-20. Tracks remaining work after open-source readiness, per-task time zones, and the follow-up hardening / unsigned-preview work on `main`.
 >
-> **Status convention:** `[x]` = code committed to the feature branch (not necessarily merged or verified); `[ ]` = not completed. Do not treat a committed feature as production-ready until its acceptance criteria pass.
+> **Status convention:** `[x]` = committed on `main` (not necessarily verified on a clean Mac); `[ ]` = not completed. Do not treat a committed feature as production-ready until its acceptance criteria pass.
 
-## Delivered on the PR branch (pending merge)
+## Delivered
 
 - [x] Add an explicit MIT `LICENSE`, `CONTRIBUTING.md`, and `SECURITY.md`.
 - [x] Update English/Chinese README positioning and onboarding.
-- [x] Add macOS CI and a manually triggered **unsigned** release-candidate build.
+- [x] Add macOS CI and a manually triggered **unsigned** preview release workflow.
 - [x] Add local task recipes: video inspection, Git status, and system health.
 - [x] Add a per-task time-zone identifier; newly created tasks default to the Mac's current zone.
 - [x] Preserve `Asia/Shanghai` interpretation for existing records with a missing time-zone field.
 - [x] Propagate the task's time zone across task editing, DatePicker, scheduling, and recalculation paths.
 - [x] Add Foundation-only timezone regression smoke tests and wire them into CI.
+- [x] Merge open-source readiness + timezone work to `main`.
+- [x] Validate IANA identifiers in the task editor and CLI (`--timezone`); surface invalid input instead of silently accepting typos.
+- [x] Support browsing any known IANA timezone (searchable sheet) plus common presets; localize timezone UI (EN/ZH).
+- [x] Keep wall-clock expressions when switching zones; preview next run in the editor; protect already-fired Once tasks.
+- [x] Show next-run times in the task's timezone in detail / menu-bar upcoming rows.
+- [x] Expand timezone smoke coverage (validation, zone switch, DST fall-back, once-shot).
+- [x] Extend the release workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` + `SHA256SUMS` as a GitHub **pre-release**.
+- [x] Publish bilingual unsigned install guides and label preview builds **Unsigned / Not notarized** in README.
 
-## P0 — Verify time-zone migration before merging
+## P0 — Still verify on real hardware / CI
 
-- [ ] **CI build:** Confirm the macOS app compiles and `tests/ScheduleTimeZoneSmoke.swift` passes on the GitHub runner; fix failures.
+- [ ] **CI build:** Confirm the macOS app compiles and `tests/ScheduleTimeZoneSmoke.swift` passes on the GitHub runner after this follow-up; fix failures.
 - [ ] **Real SwiftData migration:** Back up an existing database from the released version and verify it loads after adding the optional time-zone field; verify old `nextRunAt` values remain correct.
 - [ ] **Legacy schedules:** Verify old Once, Daily, Weekly, Weekdays and legacy cron migrations still execute at the same absolute instants (China time) unless users explicitly change zones.
-- [ ] **New schedules:** Verify the Mac system timezone is captured when each new task is created, including via the headless CLI. Confirm behavior when the OS timezone changes later.
-- [ ] **Timezone switch:** Edit a task from `Asia/Shanghai` to `Asia/Tokyo`; preserve its local wall-clock expression and recalculate `nextRunAt`. Show its next execution time clearly in the UI.
-- [ ] **DST:** Test spring-forward nonexistent local times, fall-back repeated local times, cross-day and cross-week boundaries, plus Once schedules in zones observing DST.
-- [ ] **Invalid timezone handling:** Validate IANA identifiers (UI and CLI) rather than silently accepting typos; make fallback behavior visible.
-- [ ] **Picker completeness:** Support choosing any valid IANA timezone, not only the current short preset list; localize the UI labels to Chinese and English.
+- [ ] **New schedules:** Confirm Mac system timezone capture (GUI + CLI) and behavior when the OS timezone changes later (stored zone stays fixed).
 - [ ] **Race/restart behavior:** Verify the due watcher does not duplicate or skip tasks when timezones change, execution completes, the app restarts, or `nextRunAt` is overdue.
-- [ ] **One-shot change behavior:** Specify whether switching timezone retains the entered clock time or absolute instant; protect already-fired tasks.
-- [ ] **Test suite:** Add deterministic unit tests, including time-zone transitions, parser edge cases, invalid identifiers and data migration fixtures.
-- [ ] **Review & merge:** Keep PR #1 in Draft until these checks pass; then review the full diff and merge to `main`.
+- [ ] **SwiftData upgrade fixture:** Document a real upgrade test with a checked-in sample store or scripted backup/restore steps.
+- [ ] **Clean-Mac preview check:** Verify ZIP extraction, SHA256, Gatekeeper **Open Anyway** flow, and record macOS/arch in `docs/install-unsigned.md`.
 
 ### Acceptance criteria
 
@@ -39,24 +42,23 @@
 
 ## P0 — Installation & release distribution
 
-- [ ] Add a stable, downloadable macOS app package (ZIP/DMG) through GitHub Releases.
+- [x] Add a downloadable macOS app package path (unsigned ZIP) through GitHub **pre-releases**.
 - [ ] Configure Developer ID signing, hardened runtime and Apple notarization; test Gatekeeper on a clean Mac.
-- [ ] Add a versioned release workflow with checksums and a release changelog; keep unsigned test artifacts clearly labelled.
-- [ ] Consider a Homebrew Cask **after** the public installer is verified.
-- [ ] Document upgrade/uninstall paths and persistence/backup of task history.
+- [x] Add a versioned release workflow with checksums; keep unsigned preview artifacts clearly labelled; keep CI test artifacts separate.
+- [ ] Consider a Homebrew Cask **after** the public signed installer is verified.
+- [x] Document upgrade/uninstall paths and persistence/backup of task history (unsigned guide).
 
 ### Unsigned distribution first (no Apple Developer account required)
 
-**Decision:** Runly will initially ship a clearly labeled **unsigned preview ZIP** via GitHub Releases. Do not block early adoption on a paid Apple Developer Program membership. This is a testing distribution path, not equivalent to a signed/notarized production installer.
+**Decision:** Runly initially ships a clearly labeled **unsigned preview ZIP** via GitHub pre-releases. Do not block early adoption on a paid Apple Developer Program membership.
 
 - [ ] Confirm macOS CI passes, including timezone migration and scheduling regression tests, before publishing any downloadable preview.
-- [ ] Extend the existing manual release-candidate workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` plus `SHA256SUMS` to a **GitHub pre-release** (do not automatically mark it stable).
+- [x] Extend the manual release workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` plus `SHA256SUMS` to a **GitHub pre-release** (never auto-stable).
 - [ ] Verify the app bundle, version metadata, ZIP extraction and SHA256 checksums on a clean Mac. Document which macOS versions and architectures were tested.
-- [ ] Publish a bilingual installation guide: download from the official GitHub Releases page, verify the checksum, move `Runly.app` to Applications and attempt to open.
-- [ ] Explain that Gatekeeper may block an unsigned app. For users who trust the source, document the supported **System Settings → Privacy & Security → Open Anyway** flow, including the security trade-off and that the control may only appear after a blocked launch.
-- [ ] **Never** recommend disabling Gatekeeper globally or removing the quarantine attribute as the default install path.
-- [ ] Label preview builds `Unsigned / Not notarized` prominently in Release notes and README. Keep the existing CI unsigned testing artifact separate from releases.
-- [ ] Test upgrade/uninstall and preservation of the SwiftData task database, including legacy Beijing-time schedules.
+- [x] Publish a bilingual installation guide: download → checksum → Applications → open.
+- [x] Explain Gatekeeper **Open Anyway**; never recommend disabling Gatekeeper globally or stripping quarantine as the default path.
+- [x] Label preview builds `Unsigned / Not notarized` in Release notes templates and README.
+- [ ] Test upgrade/uninstall and preservation of the SwiftData task database, including legacy Beijing-time schedules, on a clean Mac.
 
 ### Later: signed and notarized stable distribution
 
@@ -102,14 +104,16 @@
 
 ## Implementation sequencing
 
-1. **Now:** Verify and harden the timezone change; run migration tests; merge PR #1 only after CI is green.
-2. **Next:** Ship a signed and notarized installer with a trustworthy upgrade path.
+1. **Now:** Land timezone hardening + unsigned preview tooling on `main`; wait for CI green; run clean-Mac + SwiftData upgrade verification before publishing the first pre-release.
+2. **Next:** Publish the first labeled unsigned preview; gather install feedback.
 3. **Then:** Improve missed-run handling, scheduling reliability and concurrency.
-4. **Afterward:** Expand agent UX, document real demos, and start community promotion.
+4. **Afterward:** Expand agent UX, document real demos, and start community promotion. Revisit Apple signing when adoption justifies it.
 
 ### References
 
 - [PR #1 — Open-source readiness + time-zone migration](https://github.com/hlpsxc/runly/pull/1)
+- [Unsigned preview install (EN)](docs/install-unsigned.md)
+- [未签名预览安装 (ZH)](docs/install-unsigned.zh-CN.md)
 - [Agent recipes](docs/agent-recipes.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

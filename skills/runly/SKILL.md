@@ -65,6 +65,7 @@ Agent task:
 
 ## Rules
 
+- Optional `--timezone <IANA>` on create (default: Mac current zone).
 - Prefer UUID from `create`/`list` when names may collide.
 - Never edit `Runly.store` directly.
 - Logs live under `~/Library/Application Support/Runly/Logs/`.

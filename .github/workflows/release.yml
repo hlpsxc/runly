@@ -1,18 +1,43 @@
-name: Build Release Candidate
+name: Build Unsigned Preview Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version / tag for the GitHub pre-release (e.g. v0.1.0-preview.1)"
+        required: true
+        type: string
+      publish_prerelease:
+        description: "Upload ZIP + SHA256SUMS as a GitHub pre-release (never marked stable)"
+        required: true
+        type: boolean
+        default: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  unsigned-release-candidate:
+  unsigned-preview:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Build unsigned Release candidate
+
+      - name: Normalize version tag
+        id: meta
+        run: |
+          RAW="${{ inputs.version }}"
+          TAG="${RAW#v}"
+          TAG="v${TAG}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Using tag: $TAG"
+
+      - name: Verify timezone scheduling with Foundation
+        run: |
+          swiftc Runly/Utilities/ScheduleCalculator.swift tests/ScheduleTimeZoneSmoke.swift -o "$RUNNER_TEMP/runly-timezone-smoke"
+          "$RUNNER_TEMP/runly-timezone-smoke"
+
+      - name: Build unsigned Release preview
         run: |
           xcodebuild \
             -project Runly.xcodeproj \
@@ -22,6 +47,7 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/RunlyDerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             build
+
       - name: Package and checksum
         run: |
           APP="$RUNNER_TEMP/RunlyDerivedData/Build/Products/Release/Runly.app"
@@ -29,12 +55,55 @@ jobs:
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent "$APP" dist/Runly-macOS-unsigned.zip
           shasum -a 256 dist/Runly-macOS-unsigned.zip > dist/SHA256SUMS
-      - name: Upload unsigned candidate
+          {
+            echo "artifact=Runly-macOS-unsigned.zip"
+            echo "label=Unsigned / Not notarized"
+            echo "tag=${{ steps.meta.outputs.tag }}"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
+          } > dist/BUILD_INFO.txt
+          cat dist/SHA256SUMS
+          cat dist/BUILD_INFO.txt
+
+      - name: Upload unsigned preview artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Runly-macOS-unsigned-release-candidate
+          name: Runly-macOS-unsigned-preview
           path: dist/
           if-no-files-found: error
+          retention-days: 14
 
-# This deliberately does not publish a public Release:
-# production distribution requires Developer ID signing and Apple notarization.
+      - name: Publish GitHub pre-release
+        if: ${{ inputs.publish_prerelease }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          NOTES="$(cat <<EOF
+          ## Runly ${TAG} — Unsigned preview
+
+          **Label: Unsigned / Not notarized.** This is a testing distribution, not a production installer.
+
+          ### Install
+          1. Download \`Runly-macOS-unsigned.zip\` and \`SHA256SUMS\` from this pre-release.
+          2. Verify: \`shasum -a 256 -c SHA256SUMS\`
+          3. Unzip, move \`Runly.app\` to Applications, then open it.
+          4. If Gatekeeper blocks the app, use **System Settings → Privacy & Security → Open Anyway** after a blocked launch. Do **not** disable Gatekeeper globally.
+
+          Full guide: [docs/install-unsigned.md](https://github.com/${{ github.repository }}/blob/main/docs/install-unsigned.md)
+
+          CI debug artifacts remain separate from this pre-release upload.
+          EOF
+          )"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/Runly-macOS-unsigned.zip dist/SHA256SUMS dist/BUILD_INFO.txt --clobber
+            gh release edit "$TAG" --prerelease --title "Runly ${TAG} (unsigned preview)" --notes "$NOTES"
+          else
+            gh release create "$TAG" \
+              dist/Runly-macOS-unsigned.zip \
+              dist/SHA256SUMS \
+              dist/BUILD_INFO.txt \
+              --prerelease \
+              --title "Runly ${TAG} (unsigned preview)" \
+              --notes "$NOTES"
+          fi
