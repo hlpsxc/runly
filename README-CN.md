@@ -1,18 +1,35 @@
 # Runly
 
-**Run anything. Automatically.**
+**在 Mac 上定时运行 AI Agent 与 CLI 任务。**
 
-[English](README.md)
+Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面向 Claude Code、Codex、FFmpeg、Git、脚本及日常开发自动化。支持定时执行、实时查看日志、失败重试与通知，无需云端账号。
 
-Runly 是一款面向开发者和 AI Agent 的 **macOS 原生菜单栏任务调度器**。把任意 CLI（`python`、`node`、`ffmpeg`、`git`、`claude`、`codex`、`items` …）变成可定时、可追踪、可通知的本地任务。
+> Runly 调度你本机已经安装的 CLI Agent，**不提供大模型本身**。所有命令均使用本地用户权限执行。
 
-```text
-Schedule → Execute → Log → Notify
-```
+**[快速开始](#快速开始) · [任务示例](docs/agent-recipes.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [English](README.md)**
 
-> 100% 本地 · 无账号 · 无云同步 · Apple 原生 API · 无第三方依赖
+### 产品演示
+
+> **待补真实演示素材：** 在 `docs/media/` 添加菜单栏、任务编辑器与日志界面的真实截图/GIF。可以用只读 Git 状态任务录制 20–30 秒演示，不使用虚构截图。
+
+| 定时 | 执行 | 观察 |
+| --- | --- | --- |
+| 单次 / 间隔 / 每天 / 每周 / 工作日 | CLI / 脚本 / Claude Code / Codex | 实时日志 / 失败重试 / 通知 |
+
+### 安装与首次体验
+
+**目前以源码编译为主要安装方式。** 已配置 macOS CI 构建和手动触发的未签名候选产物打包，但这些产物**尚未签名与公证**，不能作为正式安装包宣传。
+
+1. `git clone https://github.com/hlpsxc/runly.git`
+2. 安装完整 Xcode 15+，执行 `open Runly.xcodeproj`
+3. 选择 **My Mac**，按 **⌘R**
+4. 点击菜单栏闪电图标，新建 Command 任务（例如 `echo hello`），点击 **Test Run**
+5. 参考 [可运行的本地任务模板](docs/agent-recipes.md)
+
+**调度限制：** 必须保持 Runly 进程运行；目前单次/每天/每周/工作日的时间固定按**北京时间 UTC+8**解释。详见后文「已知限制」。
 
 ---
+
 
 ## 功能一览
 
@@ -360,7 +377,7 @@ open Runly.xcodeproj
 
 ## License
 
-MIT（若仓库后续补充 LICENSE 文件则以该文件为准）
+[MIT License](LICENSE)
 
 ---
 
