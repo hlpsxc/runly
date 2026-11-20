@@ -170,6 +170,19 @@ struct TaskEditorView: View {
                         refreshValidation()
                     }
 
+                    Picker("Time Zone", selection: Binding(
+                        get: { draft.scheduleTimeZoneIdentifier ?? ScheduleCalculator.legacyTimeZoneIdentifier },
+                        set: { newZone in
+                            draft.scheduleTimeZoneIdentifier = newZone
+                            refreshValidation()
+                        }
+                    )) {
+                        ForEach(scheduleTimeZoneChoices, id: \.self) { identifier in
+                            Text(identifier == TimeZone.current.identifier
+                                 ? "System (\(identifier))" : identifier).tag(identifier)
+                        }
+                    }
+
                     switch draft.scheduleType {
                     case .once:
                         DatePicker(
@@ -177,14 +190,14 @@ struct TaskEditorView: View {
                             selection: onceDateBinding,
                             displayedComponents: [.date, .hourAndMinute]
                         )
-                        .environment(\.timeZone, ScheduleCalculator.scheduleTimeZone)
+                        .environment(\.timeZone, selectedScheduleTimeZone)
                     case .daily, .weekdays:
                         DatePicker(
                             t.tr("schedule.time"),
                             selection: dailyTimeBinding,
                             displayedComponents: [.hourAndMinute]
                         )
-                        .environment(\.timeZone, ScheduleCalculator.scheduleTimeZone)
+                        .environment(\.timeZone, selectedScheduleTimeZone)
                     case .weekly:
                         Picker(t.tr("schedule.weekday"), selection: weeklyWeekdayBinding) {
                             ForEach(0..<7, id: \.self) { day in
@@ -196,14 +209,14 @@ struct TaskEditorView: View {
                             selection: weeklyTimeBinding,
                             displayedComponents: [.hourAndMinute]
                         )
-                        .environment(\.timeZone, ScheduleCalculator.scheduleTimeZone)
+                        .environment(\.timeZone, selectedScheduleTimeZone)
                     case .interval:
                         TextField(t.tr("expression"), text: $draft.scheduleExpression)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.scheduleExpression) { _, _ in refreshValidation() }
                     }
 
-                    Text(t.tr("schedule.timezone_hint"))
+                    Text("Times use \(selectedScheduleTimeZone.identifier). Existing tasks stay on Beijing time unless changed.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -441,14 +454,26 @@ struct TaskEditorView: View {
         refreshPreview()
     }
 
+    private var selectedScheduleTimeZone: TimeZone {
+        ScheduleCalculator.timeZone(for: draft.scheduleTimeZoneIdentifier)
+    }
+
+    private var scheduleTimeZoneChoices: [String] {
+        var seen = Set<String>()
+        return [TimeZone.current.identifier, selectedScheduleTimeZone.identifier,
+                "Asia/Shanghai", "Etc/UTC", "Asia/Tokyo", "Europe/London",
+                "America/New_York", "America/Los_Angeles"]
+            .filter { seen.insert($0).inserted }
+    }
+
     private var onceDateBinding: Binding<Date> {
         Binding(
             get: {
-                ScheduleCalculator.parseOnceDate(draft.scheduleExpression)
-                    ?? ScheduleCalculator.defaultOnceDate()
+                ScheduleCalculator.parseOnceDate(draft.scheduleExpression, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
+                    ?? ScheduleCalculator.defaultOnceDate(timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
             },
             set: { newValue in
-                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(newValue)
+                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(newValue, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
                 refreshValidation()
             }
         )
@@ -456,9 +481,9 @@ struct TaskEditorView: View {
 
     private var dailyTimeBinding: Binding<Date> {
         Binding(
-            get: { ScheduleCalculator.dateForDailyTime(draft.scheduleExpression) },
+            get: { ScheduleCalculator.dateForDailyTime(draft.scheduleExpression, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier) },
             set: { newValue in
-                let comps = ScheduleCalculator.scheduleCalendar.dateComponents(
+                let comps = ScheduleCalculator.scheduleCalendar(timeZoneIdentifier: draft.scheduleTimeZoneIdentifier).dateComponents(
                     [.hour, .minute],
                     from: newValue
                 )
@@ -494,13 +519,13 @@ struct TaskEditorView: View {
         Binding(
             get: {
                 if let weekly = ScheduleCalculator.parseWeekly(draft.scheduleExpression) {
-                    return ScheduleCalculator.date(settingHour: weekly.hour, minute: weekly.minute)
+                    return ScheduleCalculator.date(settingHour: weekly.hour, minute: weekly.minute, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
                 }
-                return ScheduleCalculator.date(settingHour: 9, minute: 0)
+                return ScheduleCalculator.date(settingHour: 9, minute: 0, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
             },
             set: { newValue in
                 let weekday = ScheduleCalculator.parseWeekly(draft.scheduleExpression)?.weekday ?? 1
-                let comps = ScheduleCalculator.scheduleCalendar.dateComponents(
+                let comps = ScheduleCalculator.scheduleCalendar(timeZoneIdentifier: draft.scheduleTimeZoneIdentifier).dateComponents(
                     [.hour, .minute],
                     from: newValue
                 )
@@ -519,10 +544,11 @@ struct TaskEditorView: View {
         switch type {
         case .once:
             if let date = ScheduleCalculator.parseOnceDate(expr) {
-                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(date)
+                draft.scheduleExpression = ScheduleCalculator.formatOnceDate(date, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
             } else {
                 draft.scheduleExpression = ScheduleCalculator.formatOnceDate(
-                    ScheduleCalculator.defaultOnceDate()
+                    ScheduleCalculator.defaultOnceDate(timeZoneIdentifier: draft.scheduleTimeZoneIdentifier),
+                    timeZoneIdentifier: draft.scheduleTimeZoneIdentifier
                 )
             }
         case .daily, .weekdays:
