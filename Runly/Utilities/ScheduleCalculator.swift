@@ -1,13 +1,17 @@
 import Foundation
 
 enum ScheduleCalculator {
-    /// All schedule expressions (once / daily / weekly / weekdays clock fields) use Beijing time.
-    static let scheduleTimeZone = TimeZone(identifier: "Asia/Shanghai")
-        ?? TimeZone(secondsFromGMT: 8 * 3600)!
+    // Old database records do not have a zone; nil preserves their original Beijing schedule.
+    static let legacyTimeZoneIdentifier = "Asia/Shanghai"
 
-    static var scheduleCalendar: Calendar {
+    static func timeZone(for identifier: String?) -> TimeZone {
+        TimeZone(identifier: identifier ?? legacyTimeZoneIdentifier)
+            ?? TimeZone(identifier: legacyTimeZoneIdentifier)!
+    }
+
+    static func scheduleCalendar(timeZoneIdentifier: String? = nil) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = scheduleTimeZone
+        calendar.timeZone = timeZone(for: timeZoneIdentifier)
         calendar.locale = Locale(identifier: "en_US_POSIX")
         return calendar
     }
@@ -16,14 +20,15 @@ enum ScheduleCalculator {
         type: ScheduleType,
         expression: String,
         after: Date = .now,
-        enabled: Bool
+        enabled: Bool,
+        timeZoneIdentifier: String? = nil
     ) -> Date? {
         guard enabled else { return nil }
         let expr = expression.trimmingCharacters(in: .whitespacesAndNewlines)
 
         switch type {
         case .once:
-            if let date = parseAbsoluteDate(expr), date > after {
+            if let date = parseAbsoluteDate(expr, timeZoneIdentifier: timeZoneIdentifier), date > after {
                 return date
             }
             return nil
@@ -31,11 +36,11 @@ enum ScheduleCalculator {
             guard let seconds = parseIntervalSeconds(expr) else { return nil }
             return after.addingTimeInterval(TimeInterval(seconds))
         case .daily:
-            return nextDaily(expr, after: after)
+            return nextDaily(expr, after: after, timeZoneIdentifier: timeZoneIdentifier)
         case .weekly:
-            return nextWeekly(expr, after: after)
+            return nextWeekly(expr, after: after, timeZoneIdentifier: timeZoneIdentifier)
         case .weekdays:
-            return nextWeekdays(expr, after: after)
+            return nextWeekdays(expr, after: after, timeZoneIdentifier: timeZoneIdentifier)
         }
     }
 
@@ -46,7 +51,7 @@ enum ScheduleCalculator {
 
     static func parseDailyTime(_ expression: String) -> (hour: Int, minute: Int)? {
         let expr = expression.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Accept "9:05", "09:05", "09:05:00" — interpreted as Beijing time.
+        // Accept "9:05", "09:05", "09:05:00"; zone provided when evaluating.
         let parts = expr.split(separator: ":")
         guard parts.count >= 2,
               let hour = Int(parts[0]),
@@ -78,13 +83,17 @@ enum ScheduleCalculator {
         return (weekday, time.hour, time.minute)
     }
 
-    /// Parses a one-shot absolute datetime in Beijing time (minute precision).
-    static func parseOnceDate(_ expression: String) -> Date? {
-        parseAbsoluteDate(expression.trimmingCharacters(in: .whitespacesAndNewlines))
+    static func parseOnceDate(_ expression: String, timeZoneIdentifier: String? = nil) -> Date? {
+        parseAbsoluteDate(expression.trimmingCharacters(in: .whitespacesAndNewlines),
+                          timeZoneIdentifier: timeZoneIdentifier)
     }
 
-    static func formatOnceDate(_ date: Date) -> String {
-        onceFormatter.string(from: date)
+    static func formatOnceDate(_ date: Date, timeZoneIdentifier: String? = nil) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone(for: timeZoneIdentifier)
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.string(from: date)
     }
 
     static func formatDailyTime(hour: Int, minute: Int) -> String {
@@ -96,20 +105,21 @@ enum ScheduleCalculator {
         return "\(day) \(formatDailyTime(hour: hour, minute: minute))"
     }
 
-    /// Date whose hour/minute match a daily expression (for DatePicker bindings, Beijing).
-    static func dateForDailyTime(_ expression: String, reference: Date = .now) -> Date {
+    static func dateForDailyTime(_ expression: String, reference: Date = .now,
+                                 timeZoneIdentifier: String? = nil) -> Date {
         let time = parseDailyTime(expression) ?? (9, 0)
-        return date(settingHour: time.hour, minute: time.minute, of: reference)
+        return date(settingHour: time.hour, minute: time.minute, of: reference,
+                    timeZoneIdentifier: timeZoneIdentifier)
     }
 
-    static func date(settingHour hour: Int, minute: Int, of reference: Date = .now) -> Date {
-        let calendar = scheduleCalendar
+    static func date(settingHour hour: Int, minute: Int, of reference: Date = .now,
+                     timeZoneIdentifier: String? = nil) -> Date {
+        let calendar = scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier)
         return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: reference) ?? reference
     }
 
-    /// Default one-shot: next whole minute at least one minute from now (Beijing clock).
-    static func defaultOnceDate(after: Date = .now) -> Date {
-        let calendar = scheduleCalendar
+    static func defaultOnceDate(after: Date = .now, timeZoneIdentifier: String? = nil) -> Date {
+        let calendar = scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier)
         let nextMinute = calendar.date(byAdding: .minute, value: 1, to: after) ?? after.addingTimeInterval(60)
         let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: nextMinute)
         return calendar.date(from: comps) ?? nextMinute
@@ -155,14 +165,6 @@ enum ScheduleCalculator {
         "sat": 6, "saturday": 6
     ]
 
-    private static let onceFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = scheduleTimeZone
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter
-    }()
-
     private static func parseIntervalSeconds(_ expression: String) -> Int? {
         let lower = expression.lowercased()
         if lower.isEmpty || lower == "every day" {
@@ -188,7 +190,7 @@ enum ScheduleCalculator {
         return nil
     }
 
-    private static func parseAbsoluteDate(_ expression: String) -> Date? {
+    private static func parseAbsoluteDate(_ expression: String, timeZoneIdentifier: String?) -> Date? {
         guard !expression.isEmpty else { return nil }
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -198,7 +200,7 @@ enum ScheduleCalculator {
 
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = scheduleTimeZone
+        formatter.timeZone = timeZone(for: timeZoneIdentifier)
         for format in [
             "yyyy-MM-dd HH:mm",
             "yyyy-MM-dd HH:mm:ss",
@@ -214,61 +216,40 @@ enum ScheduleCalculator {
         return nil
     }
 
-    private static func nextDaily(_ expression: String, after: Date) -> Date? {
+    // DST: gaps advance to the next valid local time; repeats choose first occurrence.
+    private static func nextDaily(_ expression: String, after: Date,
+                                  timeZoneIdentifier: String?) -> Date? {
         guard let time = parseDailyTime(expression.isEmpty ? "09:00" : expression) else { return nil }
-        let calendar = scheduleCalendar
-        var components = calendar.dateComponents([.year, .month, .day], from: after)
-        components.hour = time.hour
-        components.minute = time.minute
-        components.second = 0
-        guard var candidate = calendar.date(from: components) else { return nil }
-        if candidate <= after {
-            candidate = calendar.date(byAdding: .day, value: 1, to: candidate) ?? candidate
-        }
-        return candidate
+        return scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier).nextDate(
+            after: after,
+            matching: DateComponents(hour: time.hour, minute: time.minute, second: 0),
+            matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward)
     }
 
-    private static func nextWeekly(_ expression: String, after: Date) -> Date? {
-        guard let weekly = parseWeekly(expression.isEmpty ? "Mon 09:00" : expression) else { return nil }
-        return nextOnWeekdays(
-            Set([weekly.weekday]),
-            hour: weekly.hour,
-            minute: weekly.minute,
-            after: after
-        )
+    private static func nextWeekly(_ expression: String, after: Date,
+                                   timeZoneIdentifier: String?) -> Date? {
+        guard let w = parseWeekly(expression.isEmpty ? "Mon 09:00" : expression) else { return nil }
+        return nextOnWeekdays(Set([w.weekday]), hour: w.hour, minute: w.minute,
+                              after: after, timeZoneIdentifier: timeZoneIdentifier)
     }
 
-    /// Next instant on any of the given weekdays (0=Sunday … 6=Saturday), Beijing clock.
-    private static func nextOnWeekdays(
-        _ weekdays: Set<Int>,
-        hour: Int,
-        minute: Int,
-        after: Date
-    ) -> Date? {
+    private static func nextOnWeekdays(_ weekdays: Set<Int>, hour: Int, minute: Int,
+                                       after: Date, timeZoneIdentifier: String?) -> Date? {
         guard !weekdays.isEmpty else { return nil }
-        let calendar = scheduleCalendar
-        for offset in 0..<8 {
-            guard let day = calendar.date(byAdding: .day, value: offset, to: after) else { continue }
-            let weekday = calendar.component(.weekday, from: day) - 1 // 0=Sunday
-            guard weekdays.contains(weekday) else { continue }
-            var components = calendar.dateComponents([.year, .month, .day], from: day)
-            components.hour = hour
-            components.minute = minute
-            components.second = 0
-            guard let candidate = calendar.date(from: components), candidate > after else { continue }
-            return candidate
-        }
-        return nil
+        let calendar = scheduleCalendar(timeZoneIdentifier: timeZoneIdentifier)
+        return weekdays.compactMap { weekday -> Date? in
+            calendar.nextDate(
+                after: after,
+                matching: DateComponents(weekday: weekday + 1, hour: hour, minute: minute, second: 0),
+                matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward)
+        }.min()
     }
 
-    private static func nextWeekdays(_ expression: String, after: Date) -> Date? {
+    private static func nextWeekdays(_ expression: String, after: Date,
+                                     timeZoneIdentifier: String?) -> Date? {
         let time = parseDailyTime(expression.isEmpty ? "08:00" : expression) ?? (8, 0)
-        return nextOnWeekdays(
-            Set([1, 2, 3, 4, 5]),
-            hour: time.hour,
-            minute: time.minute,
-            after: after
-        )
+        return nextOnWeekdays(Set([1, 2, 3, 4, 5]), hour: time.hour, minute: time.minute,
+                              after: after, timeZoneIdentifier: timeZoneIdentifier)
     }
 
     /// Parse cron day-of-week field into weekdays (0=Sunday … 6=Saturday).
