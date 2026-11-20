@@ -192,7 +192,8 @@ final class RunService {
             task.nextRunAt = ScheduleCalculator.nextRunDate(
                 type: task.scheduleType,
                 expression: task.scheduleExpression,
-                enabled: task.enabled
+                enabled: task.enabled,
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
             )
             try modelContext.save()
         } catch {
@@ -226,7 +227,8 @@ final class RunService {
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -256,7 +258,8 @@ final class RunService {
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
