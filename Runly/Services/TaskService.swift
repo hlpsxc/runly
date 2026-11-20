@@ -22,7 +22,7 @@ final class TaskService {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         modelContext.insert(task)
         try modelContext.save()
@@ -36,7 +36,7 @@ final class TaskService {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -55,7 +55,7 @@ final class TaskService {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -74,7 +74,7 @@ final class TaskService {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -102,7 +102,7 @@ final class TaskService {
                 expression: task.scheduleExpression,
                 after: now,
                 enabled: task.enabled,
-            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+                timeZoneIdentifier: task.scheduleTimeZoneIdentifier
             )
             if sameInstant(task.nextRunAt, computed) { continue }
             task.nextRunAt = computed
