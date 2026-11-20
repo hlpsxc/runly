@@ -174,7 +174,7 @@ final class AppState {
             expression: task.scheduleExpression,
             after: next.addingTimeInterval(1),
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try? container.mainContext.save()
         runTask(task)
