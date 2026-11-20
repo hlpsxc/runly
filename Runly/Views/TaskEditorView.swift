@@ -543,7 +543,7 @@ struct TaskEditorView: View {
         let expr = draft.scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines)
         switch type {
         case .once:
-            if let date = ScheduleCalculator.parseOnceDate(expr) {
+            if let date = ScheduleCalculator.parseOnceDate(expr, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier) {
                 draft.scheduleExpression = ScheduleCalculator.formatOnceDate(date, timeZoneIdentifier: draft.scheduleTimeZoneIdentifier)
             } else {
                 draft.scheduleExpression = ScheduleCalculator.formatOnceDate(
