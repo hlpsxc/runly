@@ -28,6 +28,6 @@ Runly supports `{{date}}`, `{{time}}`, `{{task_name}}`, `{{working_directory}}`,
 
 ## Scheduling caveats
 
-As currently implemented, Runly must remain running for scheduled tasks to fire. Daily/Weekly/Weekdays/Once clock fields currently use **Asia/Shanghai (UTC+8)**, regardless of your Mac's local timezone. A future change to time zone semantics must be coordinated with migration of existing schedules.
+As currently implemented, Runly must remain running for scheduled tasks to fire. New tasks capture your Mac's current timezone; existing tasks without a timezone field retain **Asia/Shanghai (UTC+8)**. You can change a task's timezone from its editor; this preserves the entered local clock expression and recalculates the next run. Interval schedules are elapsed seconds and do not change with timezone. DST gaps advance to the next valid local time and repeated times use the first occurrence. Always review the next run when changing a timezone.
 
 Do not put tokens in prompt text or notification output. Review `SECURITY.md` before executing untrusted code.
