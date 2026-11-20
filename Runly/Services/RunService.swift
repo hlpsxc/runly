@@ -193,7 +193,7 @@ final class RunService {
                 type: task.scheduleType,
                 expression: task.scheduleExpression,
                 enabled: task.enabled,
-            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+                timeZoneIdentifier: task.scheduleTimeZoneIdentifier
             )
             try modelContext.save()
         } catch {
@@ -228,7 +228,7 @@ final class RunService {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -259,7 +259,7 @@ final class RunService {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             enabled: task.enabled,
-        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
