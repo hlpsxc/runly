@@ -26,7 +26,7 @@ Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Code
 4. Click the menu-bar bolt icon, create a Command task (e.g. `echo hello`), and select **Test Run**.
 5. See [three runnable local automation recipes](docs/agent-recipes.md).
 
-**Scheduling caveats:** the Runly app must remain running; Once/Daily/Weekly/Weekdays are currently interpreted in **Asia/Shanghai (UTC+8)**. See [known limitations](#known-limitations).
+**Scheduling caveats:** the Runly app must remain running; Once/Daily/Weekly/Weekdays are currently interpreted in **the timezone selected for each task** (existing tasks remain Asia/Shanghai). See [known limitations](#known-limitations).
 
 ---
 
@@ -58,7 +58,7 @@ Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Code
 ### Scheduling & execution
 
 - **Schedule**: Once · Interval · Daily · Weekly · Weekdays (Mon–Fri)
-- **Beijing time (UTC+8)**: Once / Daily / Weekly / Weekdays clock fields are always interpreted as Asia/Shanghai
+- **Time zone per task**: new tasks use your Mac's current time zone; existing tasks stay Asia/Shanghai until explicitly changed
 - **Minute precision**: Once / Daily / Weekly / Weekdays use date & time pickers (to the minute); expressions store as `yyyy-MM-dd HH:mm`, `HH:mm`, or `Mon HH:mm`
 - **In-process scheduler**: while Runly is running, it checks due tasks on a configurable interval (default 20 seconds). No launchd / cron.
 - **Run in iTerm** (Settings, on when iTerm2 is installed): scheduled/manual tasks open an iTerm window so they inherit iTerm’s Screen Recording / Accessibility grants. Notification commands still run in the background.
@@ -189,7 +189,7 @@ Keep **Runly running** (Launch at Login recommended). Enabled tasks fire when th
 | Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
 | Daily | `HH:mm` | `23:05` |
 | Weekly | `Mon HH:mm` (or `0`–`6` weekday) | `Fri 18:45` |
-| Weekdays | `HH:mm` (Mon–Fri, Beijing) | `08:00` |
+| Weekdays | `HH:mm` (Mon–Fri, task timezone) | `08:00` |
 | Interval | natural language / seconds | `Every 5 minutes` · `Every 3 hours` |
 
 ### 7. CLI for agents (Cursor / Codex)
@@ -226,7 +226,7 @@ Create options include `--type`, `--arg` (repeatable), `--cwd`, `--schedule-type
 "$RUNLY" --cli create --name Briefing --command echo --arg hi \
   --schedule-type once --schedule "2026-08-20 09:30" --json
 
-# Every weekday morning (Mon–Fri 08:00 Beijing)
+# Every weekday morning (Mon–Fri 08:00 task timezone)
 "$RUNLY" --cli create --name Standup --command echo --arg standup \
   --schedule-type weekdays --schedule "08:00" --json
 ```
@@ -356,7 +356,7 @@ Stack: Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications 
 ## Known limitations
 
 - Only one in-app RunSession at a time
-- Schedules fire only while the Runly process is running
+- Schedules fire only while the Runly process is running; legacy tasks without a stored timezone continue using Asia/Shanghai
 - Notification commands with pipes/redirects may use a shell
 
 ---
