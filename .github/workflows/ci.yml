@@ -23,6 +23,10 @@ jobs:
       - name: Validate example scripts
         run: |
           bash -n examples/*.sh
+      - name: Verify timezone scheduling with Foundation
+        run: |
+          swiftc Runly/Utilities/ScheduleCalculator.swift tests/ScheduleTimeZoneSmoke.swift -o "$RUNNER_TEMP/runly-timezone-smoke"
+          "$RUNNER_TEMP/runly-timezone-smoke"
       - name: Build Runly without signing
         run: |
           xcodebuild \
