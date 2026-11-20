@@ -45,6 +45,27 @@
 - [ ] Consider a Homebrew Cask **after** the public installer is verified.
 - [ ] Document upgrade/uninstall paths and persistence/backup of task history.
 
+### Unsigned distribution first (no Apple Developer account required)
+
+**Decision:** Runly will initially ship a clearly labeled **unsigned preview ZIP** via GitHub Releases. Do not block early adoption on a paid Apple Developer Program membership. This is a testing distribution path, not equivalent to a signed/notarized production installer.
+
+- [ ] Confirm macOS CI passes, including timezone migration and scheduling regression tests, before publishing any downloadable preview.
+- [ ] Extend the existing manual release-candidate workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` plus `SHA256SUMS` to a **GitHub pre-release** (do not automatically mark it stable).
+- [ ] Verify the app bundle, version metadata, ZIP extraction and SHA256 checksums on a clean Mac. Document which macOS versions and architectures were tested.
+- [ ] Publish a bilingual installation guide: download from the official GitHub Releases page, verify the checksum, move `Runly.app` to Applications and attempt to open.
+- [ ] Explain that Gatekeeper may block an unsigned app. For users who trust the source, document the supported **System Settings → Privacy & Security → Open Anyway** flow, including the security trade-off and that the control may only appear after a blocked launch.
+- [ ] **Never** recommend disabling Gatekeeper globally or removing the quarantine attribute as the default install path.
+- [ ] Label preview builds `Unsigned / Not notarized` prominently in Release notes and README. Keep the existing CI unsigned testing artifact separate from releases.
+- [ ] Test upgrade/uninstall and preservation of the SwiftData task database, including legacy Beijing-time schedules.
+
+### Later: signed and notarized stable distribution
+
+- [ ] Revisit Apple Developer Program membership when adoption justifies the recurring cost (typically USD 99/year; check local pricing then).
+- [ ] Configure Developer ID Application certificate, hardened runtime and secure signing credentials in GitHub Actions.
+- [ ] Implement `codesign` → `notarytool` → `stapler`, and verify the finished archive/DMG passes Gatekeeper on a clean Mac.
+- [ ] Never expose signing certificates, private keys or Apple credentials in logs or repository history.
+- [ ] Publish stable signed/notarized releases and consider a Homebrew Cask only after a tested public installer is available.
+
 ## P1 — Scheduling reliability
 
 - [ ] Define missed-run semantics (`skip`, `run once on wake`, `catch up` with bounds) and clock-skew behavior.
