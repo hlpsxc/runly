@@ -17,6 +17,8 @@ final class RunlyTask {
     var scheduleTypeRaw: String
     /// Human / machine schedule expression, e.g. `Every 3 days`, `23:00`, `Mon 09:00`.
     var scheduleExpression: String
+    /// nil denotes a pre-migration task and keeps its Beijing-time schedule.
+    var scheduleTimeZoneIdentifier: String?
 
     /// KEY=VALUE lines, one per line.
     var environment: String
@@ -88,7 +90,7 @@ final class RunlyTask {
         let expr = scheduleExpression.trimmingCharacters(in: .whitespacesAndNewlines)
         if expr.isEmpty { return typeName }
         if scheduleType == .interval { return expr }
-        return "\(typeName) · \(expr)"
+        return "\(typeName) · \(expr) · \(ScheduleCalculator.timeZone(for: scheduleTimeZoneIdentifier).identifier)"
     }
 
     var commandPreview: String {
@@ -114,6 +116,7 @@ final class RunlyTask {
         workingDirectory: String = "",
         scheduleType: ScheduleType = .once,
         scheduleExpression: String = "",
+        scheduleTimeZoneIdentifier: String? = TimeZone.current.identifier,
         environment: String = "",
         proxyEnabled: Bool = false,
         httpProxy: String = "",
@@ -144,6 +147,7 @@ final class RunlyTask {
         self.workingDirectory = workingDirectory
         self.scheduleTypeRaw = scheduleType.rawValue
         self.scheduleExpression = scheduleExpression
+        self.scheduleTimeZoneIdentifier = scheduleTimeZoneIdentifier
         self.environment = environment
         self.proxyEnabled = proxyEnabled
         self.httpProxy = httpProxy
