@@ -173,7 +173,8 @@ final class AppState {
             type: task.scheduleType,
             expression: task.scheduleExpression,
             after: next.addingTimeInterval(1),
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try? container.mainContext.save()
         runTask(task)
