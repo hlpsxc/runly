@@ -21,7 +21,8 @@ final class TaskService {
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         modelContext.insert(task)
         try modelContext.save()
@@ -34,7 +35,8 @@ final class TaskService {
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -52,7 +54,8 @@ final class TaskService {
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -70,7 +73,8 @@ final class TaskService {
         task.nextRunAt = ScheduleCalculator.nextRunDate(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            enabled: task.enabled
+            enabled: task.enabled,
+        timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
         try modelContext.save()
     }
@@ -97,7 +101,8 @@ final class TaskService {
                 type: task.scheduleType,
                 expression: task.scheduleExpression,
                 after: now,
-                enabled: task.enabled
+                enabled: task.enabled,
+            timeZoneIdentifier: task.scheduleTimeZoneIdentifier
             )
             if sameInstant(task.nextRunAt, computed) { continue }
             task.nextRunAt = computed
@@ -141,6 +146,7 @@ struct TaskDraft: Equatable {
     var workingDirectory: String = ""
     var scheduleType: ScheduleType = .interval
     var scheduleExpression: String = "Every day"
+    var scheduleTimeZoneIdentifier: String? = TimeZone.current.identifier
     var environment: String = ""
     var proxyEnabled: Bool = false
     var httpProxy: String = ""
@@ -206,6 +212,7 @@ struct TaskDraft: Equatable {
             workingDirectory: task.workingDirectory,
             scheduleType: scheduleType,
             scheduleExpression: scheduleExpression,
+            scheduleTimeZoneIdentifier: task.scheduleTimeZoneIdentifier,
             environment: task.environment,
             proxyEnabled: task.proxyEnabled,
             httpProxy: task.httpProxy,
@@ -244,6 +251,7 @@ struct TaskDraft: Equatable {
             workingDirectory: copy.workingDirectory,
             scheduleType: copy.scheduleType,
             scheduleExpression: copy.scheduleExpression,
+            scheduleTimeZoneIdentifier: copy.scheduleTimeZoneIdentifier,
             environment: copy.environment,
             proxyEnabled: copy.proxyEnabled,
             httpProxy: copy.httpProxy,
@@ -274,6 +282,7 @@ struct TaskDraft: Equatable {
         task.workingDirectory = copy.workingDirectory
         task.scheduleType = copy.scheduleType
         task.scheduleExpression = copy.scheduleExpression
+        task.scheduleTimeZoneIdentifier = copy.scheduleTimeZoneIdentifier
         task.environment = copy.environment
         task.proxyEnabled = copy.proxyEnabled
         task.httpProxy = copy.httpProxy
