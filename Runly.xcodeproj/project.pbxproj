@@ -38,6 +38,7 @@
 		43F31F6078BE4C7386E13614 /* ScheduleCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E758887E62946A8BF79BBF0 /* ScheduleCalculator.swift */; };
 		4BDA9DD1F3F6454AA085FBC8 /* ShellPathResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7992CCF736534E2381260641 /* ShellPathResolver.swift */; };
 		B7B8C9D0E1F2031425364758 /* AgentDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F2031425364758 /* AgentDetector.swift */; };
+		C8B9D0E1F2031425364758A9 /* SecretRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B9D0E1F2031425364758A9 /* SecretRedactor.swift */; };
 		4F3CF9376604495CB6835EF7 /* TemplateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D7A7EE7FA848D3A7FD6670 /* TemplateEngine.swift */; };
 		518EED20BC4847C68FB24D91 /* LogViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBA0A971BDF40D89D6F3F03 /* LogViewer.swift */; };
 		0DD93862F1D049BA95BF6216 /* RunDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD162CEDE6C45FE98BF00B2 /* RunDetailView.swift */; };
@@ -88,6 +89,7 @@
 		1E758887E62946A8BF79BBF0 /* ScheduleCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleCalculator.swift; sourceTree = "<group>"; };
 		7992CCF736534E2381260641 /* ShellPathResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellPathResolver.swift; sourceTree = "<group>"; };
 		A7B8C9D0E1F2031425364758 /* AgentDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetector.swift; sourceTree = "<group>"; };
+		D8B9D0E1F2031425364758A9 /* SecretRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactor.swift; sourceTree = "<group>"; };
 		33D7A7EE7FA848D3A7FD6670 /* TemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateEngine.swift; sourceTree = "<group>"; };
 		1EBA0A971BDF40D89D6F3F03 /* LogViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewer.swift; sourceTree = "<group>"; };
 		8CD162CEDE6C45FE98BF00B2 /* RunDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDetailView.swift; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 				33D7A7EE7FA848D3A7FD6670 /* TemplateEngine.swift */,
 				7992CCF736534E2381260641 /* ShellPathResolver.swift */,
 				A7B8C9D0E1F2031425364758 /* AgentDetector.swift */,
+				D8B9D0E1F2031425364758A9 /* SecretRedactor.swift */,
 				1E758887E62946A8BF79BBF0 /* ScheduleCalculator.swift */,
 				D861009118364961859068D1 /* EnvironmentResolver.swift */,
 				F1E2D3C4B5A6978877665544 /* LoginShellEnvironment.swift */,
@@ -350,6 +353,7 @@
 				43F31F6078BE4C7386E13614 /* ScheduleCalculator.swift in Sources */,
 				4BDA9DD1F3F6454AA085FBC8 /* ShellPathResolver.swift in Sources */,
 				B7B8C9D0E1F2031425364758 /* AgentDetector.swift in Sources */,
+				C8B9D0E1F2031425364758A9 /* SecretRedactor.swift in Sources */,
 				A5CD0848371048FDB1B23B57 /* SidebarView.swift in Sources */,
 				31FF945559C744FE9C227E79 /* SystemNotificationService.swift in Sources */,
 				5412F06D600B4068ADAB4047 /* TaskDetailView.swift in Sources */,

@@ -27,4 +27,8 @@ English: [faq.md](faq.md)
 
 ## Mac 休眠或关机时任务会跑吗？
 
-不会。当前没有 launchd 兜底。Runly 再次运行后才会继续调度。
+不会。当前没有 launchd 兜底。Runly 再次运行后才会继续调度。对比见 [compare-schedulers.zh-CN.md](compare-schedulers.zh-CN.md)。
+
+## 日志里会隐藏密钥吗？
+
+尽量脱敏，但不是安全边界。任务详情里敏感环境变量会显示为 `***`；实时日志与通知会遮蔽常见 token 形态。子进程仍可能把密钥打到输出里——请把 Application Support 下的日志当作敏感文件，不需要时手动删除。自动留存/清理尚未实现。

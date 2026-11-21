@@ -232,7 +232,7 @@ struct TaskDetailView: View {
                 if task.environment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(L10n.tr("env.empty")).foregroundStyle(.secondary)
                 } else {
-                    Text(task.environment)
+                    Text(SecretRedactor.redactEnvironmentText(task.environment))
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
                 }

@@ -27,4 +27,8 @@ Usually no. Task history lives under Application Support. Back up first using [s
 
 ## Can tasks run while my Mac is asleep or off?
 
-No. There is no launchd fallback today. Schedules resume when Runly is running again.
+No. There is no launchd fallback today. Schedules resume when Runly is running again. See [compare-schedulers.md](compare-schedulers.md).
+
+## Are secrets hidden in logs?
+
+Best-effort only. Sensitive environment keys are masked in the task detail UI; live logs and notifications redact common token shapes (`Bearer …`, `sk-…`, `AKIA…`, `xox…`, `gh*_…`, and `KEY=value` for sensitive names). Child processes can still print secrets — treat log files under Application Support as sensitive and delete them when you no longer need them. Automatic retention/cleanup is not implemented yet.

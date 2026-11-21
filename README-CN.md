@@ -6,7 +6,7 @@ Runly 是一款 **本地优先的 macOS 原生菜单栏任务调度器**：面�
 
 > Runly 调度你本机已经安装的 CLI Agent，**不提供大模型本身**。所有命令均使用本地用户权限执行。
 
-**[快速开始](#快速开始) · [未签名预览安装](docs/install-unsigned.zh-CN.md) · [常见问题](docs/faq.zh-CN.md) · [任务示例](docs/agent-recipes.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [English](README.md)**
+**[快速开始](#快速开始) · [未签名预览安装](docs/install-unsigned.zh-CN.md) · [常见问题](docs/faq.zh-CN.md) · [对比 launchd/cron](docs/compare-schedulers.zh-CN.md) · [任务示例](docs/agent-recipes.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [English](README.md)**
 
 ### 产品演示
 

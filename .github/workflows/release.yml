@@ -37,6 +37,11 @@ jobs:
           swiftc Runly/Utilities/ScheduleCalculator.swift tests/ScheduleTimeZoneSmoke.swift -o "$RUNNER_TEMP/runly-timezone-smoke"
           "$RUNNER_TEMP/runly-timezone-smoke"
 
+      - name: Verify secret redaction with Foundation
+        run: |
+          swiftc Runly/Utilities/SecretRedactor.swift tests/SecretRedactorSmoke.swift -o "$RUNNER_TEMP/runly-secret-smoke"
+          "$RUNNER_TEMP/runly-secret-smoke"
+
       - name: Build unsigned Release preview
         run: |
           xcodebuild \
@@ -46,7 +51,25 @@ jobs:
             -destination 'generic/platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/RunlyDerivedData" \
             CODE_SIGNING_ALLOWED=NO \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
+            STRIP_INSTALLED_PRODUCT=YES \
+            COPY_PHASE_STRIP=YES \
+            DEPLOYMENT_POSTPROCESSING=YES \
             build
+
+      - name: Sanitize Info.plist builder keys
+        run: |
+          APP="$RUNNER_TEMP/RunlyDerivedData/Build/Products/Release/Runly.app"
+          PLIST="$APP/Contents/Info.plist"
+          for key in BuildMachineOSBuild DTCompiler DTPlatformBuild DTPlatformName \
+                     DTPlatformVersion DTSDKBuild DTSDKName DTXcode DTXcodeBuild; do
+            /usr/libexec/PlistBuddy -c "Delete :$key" "$PLIST" 2>/dev/null || true
+          done
+
+      - name: Verify Release bundle (no Debug dylib / no builder home paths)
+        run: |
+          chmod +x scripts/verify-app-bundle.sh
+          scripts/verify-app-bundle.sh "$RUNNER_TEMP/RunlyDerivedData/Build/Products/Release/Runly.app"
 
       - name: Package and checksum
         run: |
@@ -58,9 +81,11 @@ jobs:
           {
             echo "artifact=Runly-macOS-unsigned.zip"
             echo "label=Unsigned / Not notarized"
+            echo "configuration=Release"
             echo "tag=${{ steps.meta.outputs.tag }}"
             echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
+            echo "note=Do not redistribute CI Debug test artifacts"
           } > dist/BUILD_INFO.txt
           cat dist/SHA256SUMS
           cat dist/BUILD_INFO.txt
@@ -83,6 +108,7 @@ jobs:
           ## Runly ${TAG} — Unsigned preview
 
           **Label: Unsigned / Not notarized.** This is a testing distribution, not a production installer.
+          **Configuration: Release** (stripped). CI Debug test artifacts are not installers.
 
           ### Install
           1. Download \`Runly-macOS-unsigned.zip\` and \`SHA256SUMS\` from this pre-release.
@@ -91,8 +117,6 @@ jobs:
           4. If Gatekeeper blocks the app, use **System Settings → Privacy & Security → Open Anyway** after a blocked launch. Do **not** disable Gatekeeper globally.
 
           Full guide: [docs/install-unsigned.md](https://github.com/${{ github.repository }}/blob/main/docs/install-unsigned.md)
-
-          CI debug artifacts remain separate from this pre-release upload.
           EOF
           )"
           if gh release view "$TAG" >/dev/null 2>&1; then

@@ -42,10 +42,10 @@ enum RunlyCLI {
                 )
                 try await hub.execute(parsed.command)
             } catch let err as CLIError {
-                emitError(err.localizedDescription, json: parsed.json)
+                emitError(err.localizedDescription, json: parsed.json, code: err.code)
                 code = err.exitCode
             } catch {
-                emitError(error.localizedDescription, json: parsed.json)
+                emitError(error.localizedDescription, json: parsed.json, code: "failed")
                 code = 1
             }
             try? await Task.sleep(nanoseconds: 150_000_000)
@@ -55,15 +55,20 @@ enum RunlyCLI {
         dispatchMain()
     }
 
-    private static func emitError(_ message: String, json: Bool) {
+    private static func emitError(_ message: String, json: Bool, code: String = "failed") {
+        let safe = SecretRedactor.redactOutput(message)
         if json {
-            let payload: [String: Any] = ["ok": false, "error": message]
+            let payload: [String: Any] = [
+                "ok": false,
+                "error": safe,
+                "code": code
+            ]
             if let data = try? JSONSerialization.data(withJSONObject: payload),
                let text = String(data: data, encoding: .utf8) {
                 fputs(text + "\n", stderr)
             }
         } else {
-            fputs("error: \(message)\n", stderr)
+            fputs("error: \(safe)\n", stderr)
         }
     }
 }
@@ -80,6 +85,16 @@ enum CLIError: LocalizedError {
         case .notFound: 3
         case .invalid: 2
         case .failed: 1
+        }
+    }
+
+    /// Stable machine-readable code for `--json` errors.
+    var code: String {
+        switch self {
+        case .usage: "usage"
+        case .notFound: "not_found"
+        case .invalid: "invalid"
+        case .failed: "failed"
         }
     }
 

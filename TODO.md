@@ -27,6 +27,8 @@
 - [x] Automate nil-zone ≡ Asia/Shanghai and missed-run backlog skip in smoke tests.
 - [x] Detect local agent CLIs with setup hints (Settings / editor / CLI status).
 - [x] Empty-state sample task + bilingual FAQ for preview onboarding.
+- [x] Best-effort secret redaction + launchd/cron comparison docs.
+- [x] Harden unsigned preview packaging: Release-only ZIP, strip, refuse Debug dylib, scan for builder home paths; rename CI Debug artifact to `Runly-macOS-debug-ci-only`.
 
 ## P0 — Still verify on real hardware / CI
 
@@ -88,15 +90,16 @@
 - [x] Detect local Claude Code / Codex / OpenClaw executables and versions; show setup hints in Settings, task editor, and `status --json`.
 - [ ] Provide validated task templates for common agent workflows with explicit working directory and limited permissions.
 - [ ] Add per-task execution policies and approval controls; **never** silently enable permission-bypass flags.
-- [ ] Redact secrets in error messages, notifications and logs; define data retention and cleanup policies.
+- [x] Redact secrets in logs, notifications, CLI errors, and task-detail env UI (best-effort); document that auto retention/cleanup is still TODO.
+- [ ] Add automatic log retention / cleanup policies and optional secure wipe.
 - [ ] Summarize run outcomes (duration, exit code, changed files when safely available) without hiding full logs.
-- [ ] Improve CLI configuration/help and structured JSON error responses.
+- [x] Add stable `--json` error `code` fields (`usage` / `not_found` / `invalid` / `failed`) with redacted messages.
 
 ## P1 — Product onboarding & growth
 
 - [ ] Add real menu-bar, editor and log screenshots to `docs/media/` and embed a concise demo GIF in the README.
 - [x] Offer a guided first-run sample task (`/bin/echo`, disabled schedule) from the empty state; use Test Run / Run Now for success/failed visibility.
-- [ ] Add a clear comparison with plain `launchd`/`cron` and other local scheduling approaches.
+- [x] Add a clear comparison with plain `launchd`/`cron` (`docs/compare-schedulers.md`).
 - [x] Document common FAQ, permissions and known limitations in EN/ZH (`docs/faq.md`).
 - [ ] Publish real case studies (scheduled Codex/Claude work, FFmpeg analysis, Git maintenance).
 - [ ] Prepare a focused Show HN / developer-community post **after** installation and reliability are verified.
@@ -110,7 +113,7 @@
 
 ## Implementation sequencing
 
-1. **Now:** CI is green through `d742541`. Run the SwiftData upgrade checklist on a real store; publish the first unsigned preview tag via the release workflow.
+1. **Now:** Land redaction + packaging hardening on `main`; publish `v0.1.0-preview.1` unsigned Release pre-release; run SwiftData upgrade + Gatekeeper checks on a clean Mac and fill the install-doc test table.
 2. **Next:** Gather install feedback from the labeled preview.
 3. **Then:** Optional Settings for missed-run policy; deeper in-flight recovery; concurrency limits; agent templates.
 4. **Afterward:** Document real demos and start community promotion. Revisit Apple signing when adoption justifies it.
@@ -122,6 +125,7 @@
 - [未签名预览安装 (ZH)](docs/install-unsigned.zh-CN.md)
 - [SwiftData upgrade](docs/swiftdata-upgrade.md)
 - [FAQ](docs/faq.md)
+- [vs launchd/cron](docs/compare-schedulers.md)
 - [Agent recipes](docs/agent-recipes.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

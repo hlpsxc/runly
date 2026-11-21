@@ -12,7 +12,7 @@
    - `Runly-macOS-unsigned.zip`
    - `SHA256SUMS`
 
-Do not use the separate CI workflow artifact named `Runly-macOS-unsigned-test-build` as an install source; that artifact is for debugging only.
+Do not use CI workflow artifacts (now named `Runly-macOS-debug-ci-only`) as an install source. Those are **Debug** builds that can embed builder absolute paths. Only install the **Release** ZIP from a GitHub **pre-release**.
 
 ## Verify checksum
 

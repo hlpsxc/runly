@@ -391,7 +391,7 @@ final class RunService {
             status: status,
             exitCode: Int(result.exitCode),
             duration: result.duration,
-            stdout: result.stdout,
+            stdout: SecretRedactor.redactOutput(result.stdout),
             commandTemplate: commandTemplate
         )
 
@@ -404,11 +404,16 @@ final class RunService {
     }
 
     private func write(_ text: String, runID: UUID, stream: LogStream) {
-        logService.append(runID: runID, stream: stream, text: text)
-        appendLive(text)
+        let safe = SecretRedactor.redactOutput(text)
+        logService.append(runID: runID, stream: stream, text: safe)
+        appendLiveRaw(safe)
     }
 
     private func appendLive(_ text: String) {
+        appendLiveRaw(SecretRedactor.redactOutput(text))
+    }
+
+    private func appendLiveRaw(_ text: String) {
         session.liveOutput += text
         if session.liveOutput.count > 200_000 {
             session.liveOutput = String(session.liveOutput.suffix(150_000))

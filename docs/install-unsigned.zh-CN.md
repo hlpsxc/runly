@@ -12,7 +12,7 @@ English guide: [install-unsigned.md](install-unsigned.md).
    - `Runly-macOS-unsigned.zip`
    - `SHA256SUMS`
 
-不要把 CI 里的调试产物 `Runly-macOS-unsigned-test-build` 当作安装来源。
+不要把 CI 工作流产物（现为 `Runly-macOS-debug-ci-only`）当作安装来源。那是 **Debug** 构建，可能嵌入构建机绝对路径。请只安装 GitHub **pre-release** 里的 **Release** ZIP。
 
 ## 校验
 
