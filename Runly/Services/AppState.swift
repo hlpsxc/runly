@@ -305,6 +305,25 @@ final class AppState {
         pendingOpenMain = true
     }
 
+    /// Safe first-run sample: echo command, disabled schedule, ready for Test Run / Run Now.
+    @discardableResult
+    func createSampleHelloTask() throws -> RunlyTask {
+        var draft = TaskDraft()
+        draft.name = L10n.tr("sample.hello.name")
+        draft.type = .command
+        draft.command = "/bin/echo"
+        draft.arguments = L10n.tr("sample.hello.args")
+        draft.scheduleType = .interval
+        draft.scheduleExpression = "Every day"
+        draft.enabled = false
+        draft.timeout = 30
+        draft.scheduleTimeZoneIdentifier = TimeZone.current.identifier
+        let task = try createTask(draft)
+        pendingFocusTaskID = task.id
+        pendingOpenMain = true
+        return task
+    }
+
     func openDashboard() {
         pendingOpenMain = true
     }

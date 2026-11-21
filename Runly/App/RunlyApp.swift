@@ -120,6 +120,8 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItemService.isEnabled
     @State private var loginError: String?
     @State private var editingTemplate: TemplateEditorState?
+    @State private var agentStatuses: [AgentInstallStatus] = []
+    @State private var isProbingAgents = false
 
     var body: some View {
         let _ = localization.revision
@@ -199,6 +201,52 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section {
+                if isProbingAgents && agentStatuses.isEmpty {
+                    Text(t.tr("agent.probe.working"))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(agentStatuses) { status in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(status.provider.displayName)
+                                    .font(.body.weight(.medium))
+                                Spacer()
+                                Text(status.isInstalled
+                                      ? t.tr("agent.probe.found")
+                                      : t.tr("agent.probe.missing"))
+                                    .font(.caption)
+                                    .foregroundStyle(status.isInstalled ? .green : .orange)
+                            }
+                            Text(status.pathDisplay)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                            if let version = status.version {
+                                Text(version)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                            if !status.isInstalled {
+                                Text(AgentDetector.setupHint(for: status.provider))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                Button(t.tr("agent.probe.refresh")) {
+                    refreshAgentProbe()
+                }
+                .disabled(isProbingAgents)
+            } header: {
+                Text(t.tr("settings.agents"))
+            } footer: {
+                Text(t.tr("settings.agents.footer"))
+            }
+
             Section(t.tr("settings.about")) {
                 LabeledContent("App", value: "Runly")
                 Text(t.tr("app.tagline"))
@@ -269,6 +317,9 @@ struct SettingsView: View {
         .onAppear {
             launchAtLogin = LoginItemService.isEnabled
             appState.refresh()
+            if agentStatuses.isEmpty {
+                refreshAgentProbe()
+            }
         }
         .sheet(item: $editingTemplate) { state in
             NotificationTemplateEditorSheet(state: state) {
@@ -276,6 +327,17 @@ struct SettingsView: View {
             }
             .environment(appState)
             .environment(localization)
+        }
+    }
+
+    private func refreshAgentProbe() {
+        isProbingAgents = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let statuses = AgentDetector.probeAll()
+            DispatchQueue.main.async {
+                agentStatuses = statuses
+                isProbingAgents = false
+            }
         }
     }
 

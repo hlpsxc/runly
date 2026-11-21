@@ -51,6 +51,17 @@ enum DraftValidator {
             result.append(Message(id: "agent.prompt", severity: .warning, text: L10n.tr("validate.agent_prompt_empty")))
         }
 
+        if draft.type == .agent, draft.agentProvider != .custom {
+            let status = AgentDetector.probe(draft.agentProvider, includeVersion: false)
+            if !status.isInstalled {
+                result.append(Message(
+                    id: "agent.missing",
+                    severity: .warning,
+                    text: AgentDetector.setupHint(for: draft.agentProvider)
+                ))
+            }
+        }
+
         if let quoteIssue = unbalancedQuotes(in: draft.arguments) {
             result.append(Message(id: "args.quotes", severity: .error, text: quoteIssue))
         }

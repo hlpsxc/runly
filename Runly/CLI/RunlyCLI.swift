@@ -496,12 +496,24 @@ private final class CLIHub {
         let tasks = try taskService.fetchAll()
         let running = tasks.filter { $0.lastRunStatus == .running }
         let failed = tasks.filter { $0.lastRunStatus == .failed || $0.lastRunStatus == .timeout }
+        let agentStatuses = AgentDetector.probeAll(includeVersion: true)
+        let agents = agentStatuses.map { status -> [String: Any] in
+            [
+                "provider": status.provider.rawValue,
+                "executable": status.executable,
+                "installed": status.isInstalled,
+                "path": status.path?.path ?? "",
+                "version": status.version ?? "",
+                "setupHint": status.isInstalled ? "" : AgentDetector.setupHint(for: status.provider)
+            ]
+        }
         let payload: [String: Any] = [
             "ok": true,
             "total": tasks.count,
             "enabled": tasks.filter(\.enabled).count,
             "running": running.map { ["id": $0.id.uuidString, "name": $0.name] },
-            "failed": failed.prefix(10).map { ["id": $0.id.uuidString, "name": $0.name, "status": $0.lastRunStatus?.rawValue ?? ""] }
+            "failed": failed.prefix(10).map { ["id": $0.id.uuidString, "name": $0.name, "status": $0.lastRunStatus?.rawValue ?? ""] },
+            "agents": agents
         ]
         if json {
             emit(payload)
@@ -509,6 +521,15 @@ private final class CLIHub {
             print("tasks=\(tasks.count) enabled=\(tasks.filter(\.enabled).count) running=\(running.count) failed=\(failed.count)")
             for task in running {
                 print("  running  \(task.id.uuidString)  \(task.name)")
+            }
+            print("agents:")
+            for status in agentStatuses {
+                if status.isInstalled {
+                    let version = status.version.map { " (\($0))" } ?? ""
+                    print("  \(status.provider.rawValue)  ok  \(status.pathDisplay)\(version)")
+                } else {
+                    print("  \(status.provider.rawValue)  missing  — \(AgentDetector.setupHint(for: status.provider))")
+                }
             }
         }
     }

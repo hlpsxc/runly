@@ -116,10 +116,19 @@ struct ContentView: View {
                 Text(localization.tr("no_tasks.desc"))
                     .multilineTextAlignment(.center)
             } actions: {
+                Button(localization.tr("sample.hello.create")) {
+                    do {
+                        _ = try appState.createSampleHelloTask()
+                        viewModel.refresh()
+                        applyPendingFocus()
+                    } catch {
+                        appState.errorMessage = error.localizedDescription
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
                 Button(localization.tr("new_task")) {
                     appState.editorRoute = .create
                 }
-                .keyboardShortcut(.defaultAction)
             }
         } else {
             ContentUnavailableView(

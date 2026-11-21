@@ -6,7 +6,7 @@ Runly is a **local-first native macOS menu bar scheduler** for Claude Code, Code
 
 > Runly is a scheduler for installed command-line agents, **not** an AI model provider. Commands run with your local user permissions.
 
-**[Getting started](#quick-start) · [Unsigned preview install](docs/install-unsigned.md) · [Task recipes](docs/agent-recipes.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [中文](README-CN.md)**
+**[Getting started](#quick-start) · [Unsigned preview install](docs/install-unsigned.md) · [FAQ](docs/faq.md) · [Task recipes](docs/agent-recipes.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [中文](README-CN.md)**
 
 ### See Runly in action
 

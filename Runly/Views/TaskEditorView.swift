@@ -105,6 +105,24 @@ struct TaskEditorView: View {
                             refreshPreview()
                         }
 
+                        if draft.agentProvider != .custom {
+                            let status = AgentDetector.probe(draft.agentProvider, includeVersion: false)
+                            if status.isInstalled {
+                                Text(String(
+                                    format: t.tr("agent.probe.editor_found"),
+                                    locale: localization.language.locale,
+                                    status.pathDisplay
+                                ))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            } else {
+                                Text(AgentDetector.setupHint(for: draft.agentProvider))
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+
                         TextField(t.tr("executable"), text: $draft.command)
                             .font(.system(.body, design: .monospaced))
                             .onChange(of: draft.command) { _, _ in refreshPreview() }

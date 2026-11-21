@@ -84,6 +84,7 @@ Notes:
 - `--type` = `command` | `script` | `agent`
 - `--schedule-type` = `once` | `interval` | `daily` | `weekly` | `weekdays`
 - `--timezone <IANA>` optional (default: Mac current zone); invalid identifiers are rejected
+- `status --json` includes local agent CLI detection (`claude` / `codex` / `openclaw`)
 - Name lookup is case-insensitive; prefer UUID if names collide.
 
 ## Run / Stop

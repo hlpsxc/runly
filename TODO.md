@@ -1,6 +1,6 @@
 # Runly — Roadmap & Follow-up TODO
 
-> Last updated: 2026-11-20. Tracks remaining work after open-source readiness, per-task time zones, unsigned-preview tooling, and scheduling reliability hardening on `main`.
+> Last updated: 2026-11-21. Tracks remaining work after open-source readiness, per-task time zones, unsigned-preview tooling, scheduling reliability hardening, and agent onboarding on `main`.
 >
 > **Status convention:** `[x]` = committed on `main` (not necessarily verified on a clean Mac); `[ ]` = not completed. Do not treat a committed feature as production-ready until its acceptance criteria pass.
 
@@ -25,11 +25,13 @@
 - [x] Define missed-run policy **run once on wake**; persist schedule claim before starting a due run (no silent `try?` save).
 - [x] Document SwiftData upgrade / backup / restore and migration contract (`docs/swiftdata-upgrade.md`).
 - [x] Automate nil-zone ≡ Asia/Shanghai and missed-run backlog skip in smoke tests.
+- [x] Detect local agent CLIs with setup hints (Settings / editor / CLI status).
+- [x] Empty-state sample task + bilingual FAQ for preview onboarding.
 
 ## P0 — Still verify on real hardware / CI
 
-- [x] **CI build (5d28c38):** macOS Build green on `main` after the smoke-test compile fix ([run](https://github.com/hlpsxc/runly/actions/runs/44750983405)); re-confirm after the missed-run follow-up lands.
-- [ ] **CI build (latest):** Confirm the missed-run / upgrade-doc follow-up also passes macOS Build + smoke tests.
+- [x] **CI build (5d28c38):** macOS Build green after the smoke-test compile fix ([run](https://github.com/hlpsxc/runly/actions/runs/44750983405)).
+- [x] **CI build (d742541):** missed-run / upgrade-doc follow-up green on `main`.
 - [ ] **Real SwiftData migration:** Follow [docs/swiftdata-upgrade.md](docs/swiftdata-upgrade.md) on a machine with a pre-timezone store; verify old `nextRunAt` absolute instants.
 - [ ] **Legacy schedules:** Manually confirm Once / Daily / Weekly / Weekdays / migrated cron still match China-time instants unless the zone is changed.
 - [ ] **New schedules:** Confirm Mac system timezone capture (GUI + CLI) and that later OS timezone changes do not rewrite stored task zones.
@@ -55,7 +57,7 @@
 
 **Decision:** Runly initially ships a clearly labeled **unsigned preview ZIP** via GitHub pre-releases. Do not block early adoption on a paid Apple Developer Program membership.
 
-- [ ] Confirm macOS CI passes, including timezone and missed-run smoke tests, before publishing any downloadable preview.
+- [x] Confirm macOS CI passes, including timezone and missed-run smoke tests, before publishing any downloadable preview (`d742541` green).
 - [x] Extend the manual release workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` plus `SHA256SUMS` to a **GitHub pre-release** (never auto-stable).
 - [ ] Verify the app bundle, version metadata, ZIP extraction and SHA256 checksums on a clean Mac. Document which macOS versions and architectures were tested.
 - [x] Publish a bilingual installation guide: download → checksum → Applications → open.
@@ -83,7 +85,7 @@
 
 ## P1 — Agent experience and safety
 
-- [ ] Detect local Claude Code / Codex executables and versions; provide actionable setup instructions.
+- [x] Detect local Claude Code / Codex / OpenClaw executables and versions; show setup hints in Settings, task editor, and `status --json`.
 - [ ] Provide validated task templates for common agent workflows with explicit working directory and limited permissions.
 - [ ] Add per-task execution policies and approval controls; **never** silently enable permission-bypass flags.
 - [ ] Redact secrets in error messages, notifications and logs; define data retention and cleanup policies.
@@ -93,9 +95,9 @@
 ## P1 — Product onboarding & growth
 
 - [ ] Add real menu-bar, editor and log screenshots to `docs/media/` and embed a concise demo GIF in the README.
-- [ ] Offer a guided first-run task with a safe Test Run and visible success/failed states.
+- [x] Offer a guided first-run sample task (`/bin/echo`, disabled schedule) from the empty state; use Test Run / Run Now for success/failed visibility.
 - [ ] Add a clear comparison with plain `launchd`/`cron` and other local scheduling approaches.
-- [ ] Maintain English and Chinese docs in parallel; document common FAQ, permissions and known limitations.
+- [x] Document common FAQ, permissions and known limitations in EN/ZH (`docs/faq.md`).
 - [ ] Publish real case studies (scheduled Codex/Claude work, FFmpeg analysis, Git maintenance).
 - [ ] Prepare a focused Show HN / developer-community post **after** installation and reliability are verified.
 
@@ -108,10 +110,10 @@
 
 ## Implementation sequencing
 
-1. **Now:** Confirm CI green on `main`; run the SwiftData upgrade checklist on a real store; then publish the first unsigned preview tag.
+1. **Now:** CI is green through `d742541`. Run the SwiftData upgrade checklist on a real store; publish the first unsigned preview tag via the release workflow.
 2. **Next:** Gather install feedback from the labeled preview.
-3. **Then:** Optional Settings for missed-run policy; deeper in-flight recovery; concurrency limits.
-4. **Afterward:** Expand agent UX, document real demos, and start community promotion. Revisit Apple signing when adoption justifies it.
+3. **Then:** Optional Settings for missed-run policy; deeper in-flight recovery; concurrency limits; agent templates.
+4. **Afterward:** Document real demos and start community promotion. Revisit Apple signing when adoption justifies it.
 
 ### References
 
@@ -119,6 +121,7 @@
 - [Unsigned preview install (EN)](docs/install-unsigned.md)
 - [未签名预览安装 (ZH)](docs/install-unsigned.zh-CN.md)
 - [SwiftData upgrade](docs/swiftdata-upgrade.md)
+- [FAQ](docs/faq.md)
 - [Agent recipes](docs/agent-recipes.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
