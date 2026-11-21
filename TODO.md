@@ -29,6 +29,7 @@
 - [x] Empty-state sample task + bilingual FAQ for preview onboarding.
 - [x] Best-effort secret redaction + launchd/cron comparison docs.
 - [x] Harden unsigned preview packaging: Release-only ZIP, strip, refuse Debug dylib, scan for builder home paths; rename CI Debug artifact to `Runly-macOS-debug-ci-only`.
+- [x] Publish first unsigned preview [`v0.1.0-preview.1`](https://github.com/hlpsxc/runly/releases/tag/v0.1.0-preview.1); verified no `/Users/…` builder paths and no Debug dylib in the ZIP.
 
 ## P0 — Still verify on real hardware / CI
 

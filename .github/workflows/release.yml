@@ -77,7 +77,8 @@ jobs:
           test -d "$APP"
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent "$APP" dist/Runly-macOS-unsigned.zip
-          shasum -a 256 dist/Runly-macOS-unsigned.zip > dist/SHA256SUMS
+          # Basename-only paths so `shasum -c` works next to the downloaded ZIP.
+          (cd dist && shasum -a 256 Runly-macOS-unsigned.zip > SHA256SUMS)
           {
             echo "artifact=Runly-macOS-unsigned.zip"
             echo "label=Unsigned / Not notarized"
