@@ -1,6 +1,6 @@
 # Runly — Roadmap & Follow-up TODO
 
-> Last updated: 2026-11-20. Tracks remaining work after open-source readiness, per-task time zones, and the follow-up hardening / unsigned-preview work on `main`.
+> Last updated: 2026-11-20. Tracks remaining work after open-source readiness, per-task time zones, unsigned-preview tooling, and scheduling reliability hardening on `main`.
 >
 > **Status convention:** `[x]` = committed on `main` (not necessarily verified on a clean Mac); `[ ]` = not completed. Do not treat a committed feature as production-ready until its acceptance criteria pass.
 
@@ -22,23 +22,26 @@
 - [x] Expand timezone smoke coverage (validation, zone switch, DST fall-back, once-shot).
 - [x] Extend the release workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` + `SHA256SUMS` as a GitHub **pre-release**.
 - [x] Publish bilingual unsigned install guides and label preview builds **Unsigned / Not notarized** in README.
+- [x] Define missed-run policy **run once on wake**; persist schedule claim before starting a due run (no silent `try?` save).
+- [x] Document SwiftData upgrade / backup / restore and migration contract (`docs/swiftdata-upgrade.md`).
+- [x] Automate nil-zone ≡ Asia/Shanghai and missed-run backlog skip in smoke tests.
 
 ## P0 — Still verify on real hardware / CI
 
-- [ ] **CI build:** Confirm the macOS app compiles and `tests/ScheduleTimeZoneSmoke.swift` passes on the GitHub runner after this follow-up; fix failures.
-- [ ] **Real SwiftData migration:** Back up an existing database from the released version and verify it loads after adding the optional time-zone field; verify old `nextRunAt` values remain correct.
-- [ ] **Legacy schedules:** Verify old Once, Daily, Weekly, Weekdays and legacy cron migrations still execute at the same absolute instants (China time) unless users explicitly change zones.
-- [ ] **New schedules:** Confirm Mac system timezone capture (GUI + CLI) and behavior when the OS timezone changes later (stored zone stays fixed).
-- [ ] **Race/restart behavior:** Verify the due watcher does not duplicate or skip tasks when timezones change, execution completes, the app restarts, or `nextRunAt` is overdue.
-- [ ] **SwiftData upgrade fixture:** Document a real upgrade test with a checked-in sample store or scripted backup/restore steps.
+- [x] **CI build (5d28c38):** macOS Build green on `main` after the smoke-test compile fix ([run](https://github.com/hlpsxc/runly/actions/runs/44750983405)); re-confirm after the missed-run follow-up lands.
+- [ ] **CI build (latest):** Confirm the missed-run / upgrade-doc follow-up also passes macOS Build + smoke tests.
+- [ ] **Real SwiftData migration:** Follow [docs/swiftdata-upgrade.md](docs/swiftdata-upgrade.md) on a machine with a pre-timezone store; verify old `nextRunAt` absolute instants.
+- [ ] **Legacy schedules:** Manually confirm Once / Daily / Weekly / Weekdays / migrated cron still match China-time instants unless the zone is changed.
+- [ ] **New schedules:** Confirm Mac system timezone capture (GUI + CLI) and that later OS timezone changes do not rewrite stored task zones.
+- [ ] **Race/restart behavior:** On a clean Mac, quit mid-run and with overdue slots; confirm no duplicate fire of the same claimed slot and that backlog does not catch up day-by-day.
 - [ ] **Clean-Mac preview check:** Verify ZIP extraction, SHA256, Gatekeeper **Open Anyway** flow, and record macOS/arch in `docs/install-unsigned.md`.
 
 ### Acceptance criteria
 
 1. All previously stored tasks retain their intended firing time after upgrade without user edits.
 2. Every new calendar schedule uses its selected IANA timezone consistently in UI, persistence and execution; intervals remain elapsed seconds.
-3. `nextRunAt` stays correct across restarts, DST boundaries and schedule edits.
-4. macOS CI passes and a real SwiftData upgrade test is documented.
+3. `nextRunAt` stays correct across restarts, DST boundaries and schedule edits; overdue handling matches **run once on wake**.
+4. macOS CI passes and a real SwiftData upgrade test is documented (checklist exists; human run still required).
 
 ## P0 — Installation & release distribution
 
@@ -46,13 +49,13 @@
 - [ ] Configure Developer ID signing, hardened runtime and Apple notarization; test Gatekeeper on a clean Mac.
 - [x] Add a versioned release workflow with checksums; keep unsigned preview artifacts clearly labelled; keep CI test artifacts separate.
 - [ ] Consider a Homebrew Cask **after** the public signed installer is verified.
-- [x] Document upgrade/uninstall paths and persistence/backup of task history (unsigned guide).
+- [x] Document upgrade/uninstall paths and persistence/backup of task history (unsigned guide + SwiftData upgrade doc).
 
 ### Unsigned distribution first (no Apple Developer account required)
 
 **Decision:** Runly initially ships a clearly labeled **unsigned preview ZIP** via GitHub pre-releases. Do not block early adoption on a paid Apple Developer Program membership.
 
-- [ ] Confirm macOS CI passes, including timezone migration and scheduling regression tests, before publishing any downloadable preview.
+- [ ] Confirm macOS CI passes, including timezone and missed-run smoke tests, before publishing any downloadable preview.
 - [x] Extend the manual release workflow to accept an explicit version/tag and upload `Runly-macOS-unsigned.zip` plus `SHA256SUMS` to a **GitHub pre-release** (never auto-stable).
 - [ ] Verify the app bundle, version metadata, ZIP extraction and SHA256 checksums on a clean Mac. Document which macOS versions and architectures were tested.
 - [x] Publish a bilingual installation guide: download → checksum → Applications → open.
@@ -70,12 +73,13 @@
 
 ## P1 — Scheduling reliability
 
-- [ ] Define missed-run semantics (`skip`, `run once on wake`, `catch up` with bounds) and clock-skew behavior.
+- [x] Define missed-run semantics baseline (`run once on wake`) and document clock-powered-off limitation.
+- [ ] Optionally expose missed-run policy in Settings (`skip` vs `run once on wake`) if users need it.
 - [ ] Evaluate `launchd`-backed scheduling or a robust background helper with explicit lifecycle and permission management.
 - [ ] Define execution queue, concurrency limit, deduplication keys, task cancellation and retry/backoff.
-- [ ] Persist in-flight state and recover safely after process crashes, reboot and sleep/wake.
+- [ ] Persist in-flight run state and recover safely after process crashes, reboot and sleep/wake (beyond schedule-slot claims).
 - [ ] Add integration tests for heavy load, overlaps, process termination and headless/GUI simultaneous access.
-- [ ] Clearly disclose that local tasks cannot run while the Mac is powered off.
+- [x] Clearly disclose that local tasks cannot run while the Mac is powered off.
 
 ## P1 — Agent experience and safety
 
@@ -104,9 +108,9 @@
 
 ## Implementation sequencing
 
-1. **Now:** Land timezone hardening + unsigned preview tooling on `main`; wait for CI green; run clean-Mac + SwiftData upgrade verification before publishing the first pre-release.
-2. **Next:** Publish the first labeled unsigned preview; gather install feedback.
-3. **Then:** Improve missed-run handling, scheduling reliability and concurrency.
+1. **Now:** Confirm CI green on `main`; run the SwiftData upgrade checklist on a real store; then publish the first unsigned preview tag.
+2. **Next:** Gather install feedback from the labeled preview.
+3. **Then:** Optional Settings for missed-run policy; deeper in-flight recovery; concurrency limits.
 4. **Afterward:** Expand agent UX, document real demos, and start community promotion. Revisit Apple signing when adoption justifies it.
 
 ### References
@@ -114,6 +118,7 @@
 - [PR #1 — Open-source readiness + time-zone migration](https://github.com/hlpsxc/runly/pull/1)
 - [Unsigned preview install (EN)](docs/install-unsigned.md)
 - [未签名预览安装 (ZH)](docs/install-unsigned.zh-CN.md)
+- [SwiftData upgrade](docs/swiftdata-upgrade.md)
 - [Agent recipes](docs/agent-recipes.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

@@ -186,6 +186,8 @@ Prompt templates: `{{date}}` `{{time}}` `{{task_name}}` `{{working_directory}}` 
 
 Keep **Runly running** (Launch at Login recommended). Enabled tasks fire when the in-process poller sees `nextRunAt` in the past. Interval is **Settings → Check due tasks every N seconds** (default 20).
 
+**Missed runs:** if Runly was quit or the Mac slept through a slot, the next poll fires that overdue slot **once**, then schedules the next occurrence after *now* (no multi-day catch-up storm). The claim is saved before the run starts so a restart does not double-fire the same slot. See [SwiftData upgrade notes](docs/swiftdata-upgrade.md).
+
 | Type | Expression (minute precision) | Example |
 | --- | --- | --- |
 | Once | `yyyy-MM-dd HH:mm` | `2026-08-20 09:30` |
@@ -358,7 +360,9 @@ Stack: Swift · SwiftUI · SwiftData · Foundation.Process · UserNotifications 
 ## Known limitations
 
 - Only one in-app RunSession at a time
-- Schedules fire only while the Runly process is running; legacy tasks without a stored timezone continue using Asia/Shanghai
+- Schedules fire only while the Runly process is running; there is no launchd fallback while the Mac is powered off
+- Legacy tasks without a stored timezone continue using Asia/Shanghai until edited
+- Missed-run policy is **run once on wake** (not full catch-up); clock skew edge cases are still evolving
 - Notification commands with pipes/redirects may use a shell
 
 ---

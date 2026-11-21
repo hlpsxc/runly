@@ -68,6 +68,41 @@ enum ScheduleCalculator {
         )
     }
 
+    /// What to do after claiming an overdue `nextRunAt` slot.
+    ///
+    /// Default is `runOnceOnWake`: fire the overdue slot once, then schedule the
+    /// next occurrence strictly after `now` (skip backlog catch-up). Interval
+    /// schedules still advance by elapsed seconds from `now`.
+    enum MissedRunPolicy: String, CaseIterable {
+        case runOnceOnWake
+    }
+
+    /// Next `nextRunAt` after the due watcher claims `claimedSlot`.
+    static func nextRunDateAfterClaim(
+        type: ScheduleType,
+        expression: String,
+        claimedSlot: Date,
+        now: Date = .now,
+        enabled: Bool,
+        timeZoneIdentifier: String? = nil,
+        policy: MissedRunPolicy = .runOnceOnWake
+    ) -> Date? {
+        guard enabled else { return nil }
+        let after: Date
+        switch policy {
+        case .runOnceOnWake:
+            // Prefer "now" so a multi-day backlog does not chain one fire per poll tick.
+            after = max(claimedSlot, now)
+        }
+        return nextRunDate(
+            type: type,
+            expression: expression,
+            after: after,
+            enabled: enabled,
+            timeZoneIdentifier: timeZoneIdentifier
+        )
+    }
+
     static func nextRunDate(
         type: ScheduleType,
         expression: String,

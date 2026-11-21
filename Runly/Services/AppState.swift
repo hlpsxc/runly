@@ -24,6 +24,9 @@ final class AppState {
     /// When this GUI process started (shown in Settings → About).
     let lastLaunchedAt: Date
 
+    /// Shared with TaskService / RunService — due-slot claims must save on this context.
+    private let modelContext: ModelContext
+
     private(set) var allTasks: [RunlyTask] = []
     private(set) var notificationTemplates: [NotificationTemplate] = []
     private var orphanWatchTask: Task<Void, Never>?
@@ -33,7 +36,9 @@ final class AppState {
     init(container: ModelContainer) {
         self.container = container
         self.lastLaunchedAt = Date()
-        let context = ModelContext(container)
+        // One main-actor context for fetch/mutate/save (including due-slot claims).
+        let context = container.mainContext
+        self.modelContext = context
         let session = RunSession()
         let logService = LogService()
         self.session = session
@@ -167,18 +172,71 @@ final class AppState {
         }
 
         let key = "\(task.id.uuidString)-\(Int(next.timeIntervalSince1970))"
-        firedScheduleKeys.insert(key)
-        // Advance before starting so the next tick does not re-fire the same slot.
-        task.nextRunAt = ScheduleCalculator.nextRunDate(
+        // Claim the overdue slot, then jump to the next future occurrence (run-once-on-wake).
+        // Persist on the same ModelContext that owns the task before starting the run.
+        let previousNext = next
+        let claimedNext = ScheduleCalculator.nextRunDateAfterClaim(
             type: task.scheduleType,
             expression: task.scheduleExpression,
-            after: next.addingTimeInterval(1),
+            claimedSlot: next,
+            now: now,
             enabled: task.enabled,
             timeZoneIdentifier: task.scheduleTimeZoneIdentifier
         )
-        try? container.mainContext.save()
-        runTask(task)
+        task.nextRunAt = claimedNext
+        do {
+            try modelContext.save()
+        } catch {
+            task.nextRunAt = previousNext
+            errorMessage = error.localizedDescription
+            refresh()
+            return
+        }
+        firedScheduleKeys.insert(key)
+
+        let lastRunBefore = task.lastRunAt
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            // Another run took the session before we could start — roll the claim back.
+            if self.session.isRunning, self.session.taskID != task.id {
+                self.restoreUnstartedClaim(
+                    task: task,
+                    previousNext: previousNext,
+                    fireKey: key,
+                    lastRunBefore: lastRunBefore
+                )
+                self.refresh()
+                return
+            }
+            await self.runService.runNow(task)
+            self.restoreUnstartedClaim(
+                task: task,
+                previousNext: previousNext,
+                fireKey: key,
+                lastRunBefore: lastRunBefore
+            )
+            self.refresh()
+        }
         refresh()
+    }
+
+    /// Roll back a persisted due-slot claim when the run never actually started.
+    private func restoreUnstartedClaim(
+        task: RunlyTask,
+        previousNext: Date,
+        fireKey: String,
+        lastRunBefore: Date?
+    ) {
+        if session.isRunning, session.taskID == task.id { return }
+        let didStartOrFinish = task.lastRunAt != lastRunBefore
+        guard !didStartOrFinish else { return }
+        task.nextRunAt = previousNext
+        firedScheduleKeys.remove(fireKey)
+        do {
+            try modelContext.save()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func refresh() {

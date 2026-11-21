@@ -99,6 +99,44 @@ struct ScheduleTimeZoneSmoke {
         check(TimeZone.knownTimeZoneIdentifiers.contains("Pacific/Auckland"),
               "IANA catalog available for picker completeness")
 
-        print("PASS: schedule timezone compatibility, validation, DST and once-shot checks")
+        // SwiftData upgrade contract: nil zone == explicit Asia/Shanghai for every calendar type.
+        for (type, expr) in [
+            (ScheduleType.once, "2026-11-20 09:00"),
+            (.daily, "09:00"),
+            (.weekly, "Mon 09:00"),
+            (.weekdays, "08:00")
+        ] as [(ScheduleType, String)] {
+            let after = instant("2026-11-19T00:00:00Z")
+            let legacy = ScheduleCalculator.nextRunDate(
+                type: type, expression: expr, after: after, enabled: true, timeZoneIdentifier: nil)
+            let shanghai = ScheduleCalculator.nextRunDate(
+                type: type, expression: expr, after: after, enabled: true,
+                timeZoneIdentifier: "Asia/Shanghai")
+            check(legacy == shanghai, "nil zone matches Asia/Shanghai for \(expr)")
+        }
+
+        // Missed-run policy: claim an overdue daily slot days later → jump past the backlog.
+        let claimed = instant("2026-11-16T01:00:00Z") // Mon 09:00 Asia/Shanghai
+        let wake = instant("2026-11-19T12:00:00Z")    // Thursday noon UTC
+        let afterClaim = ScheduleCalculator.nextRunDateAfterClaim(
+            type: .daily, expression: "09:00", claimedSlot: claimed, now: wake,
+            enabled: true, timeZoneIdentifier: "Asia/Shanghai")
+        check(afterClaim == instant("2026-11-20T01:00:00Z"),
+              "run-once-on-wake skips multi-day daily backlog")
+        let catchUp = ScheduleCalculator.nextRunDate(
+            type: .daily, expression: "09:00", after: claimed.addingTimeInterval(1),
+            enabled: true, timeZoneIdentifier: "Asia/Shanghai")
+        check(catchUp == instant("2026-11-17T01:00:00Z"),
+              "naive after-claim would still be overdue (contrast)")
+
+        let intervalAfter = ScheduleCalculator.nextRunDateAfterClaim(
+            type: .interval, expression: "Every 1 hour",
+            claimedSlot: instant("2026-11-19T00:00:00Z"),
+            now: instant("2026-11-19T03:00:00Z"),
+            enabled: true, timeZoneIdentifier: "Asia/Tokyo")
+        check(intervalAfter == instant("2026-11-19T04:00:00Z"),
+              "interval run-once-on-wake advances from now, not the stale slot")
+
+        print("PASS: schedule timezone, migration contract, missed-run and DST checks")
     }
 }
